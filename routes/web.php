@@ -13,8 +13,8 @@ Route::middleware('guest')->group(function () {
         return Inertia::render('Login');
     });
 
-    Route::get('/login', [AuthController::class, 'index' ])->name('login');
-    Route::post('/login', [AuthController::class, 'login' ])->name('login');
+    Route::get('/login', [AuthController::class, 'create' ])->name('login');
+    Route::post('/login', [AuthController::class, 'store' ])->name('login');
 
 });
 
