@@ -7,96 +7,56 @@ use App\Http\Requests\UpdateAuthRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
-use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\Auth;
 
 
 class AuthController extends Controller
-{   
-    
-    public function login(Request $request) {
-        // For checking purposes only
-        // dd("Login successful");
-
-       $request->validate([
-        'email' => ['required', 'email'],
-        'password' => ['required', 'min:8'], // Enforces 8 characters
-        ]);
-
-        //  If validation passes, try logging in
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return back()->withErrors([
-                'email' => 'Invalid email or password.', // Shown only when authentication fails
-            ])->onlyInput('email');
-        }
-
-        $user = Auth::user();
-
-        // Redirect based on user type
-        if ($user->userType->user_type === 'admin') {
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->route('student.dashboard');
-    }
-
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+{
+    public function create()
     {
         return Inertia::render('Login');
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request)
     {
-        //
-    }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreAuthRequest $request)
-    {
-        //
-    }
+        /**
+         *  This function handles the login process.
+         *  It validates the request data, attempts to log in the user,
+         *  and redirects them to the intended page or back with an error message.
+         */
+        // Validate the request data
+        $credentials = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Auth $auth)
-    {
-        //
-    }
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Auth $auth)
-    {
-        //
-    }
+            $user = Auth::user(); // Get the authenticated user
+ 
+            $roleName = $user->userType->user_type; 
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateAuthRequest $request, Auth $auth)
-    {
-        //
-    }
+            // Check the user's role and redirect accordingly
+            if ($roleName === 'Admin') {
+                return redirect()->intended(route('admin.dashboard')); // Redirect admin to admin dashboard
+            }
+            return redirect()->intended(route('student.dashboard')); // Redirect student to student dashboard
 
-    /**
-     * Remove the specified resource from storage.
-     */
+        }
+        // If authentication fails, redirect back with an error message
+        return back()->withErrors([
+            'password' => 'Invalid Password or Email.',
+        ])->onlyInput('email');
+    }
     public function destroy(Request $request)
     {
         /**
          *  Removes the login info from the session, so the user is no longer logged in.
          */
         Auth::logout();
-        
+
         // It clears all temporary data stored for the user to fully log them out.
         $request->session()->invalidate();
 
