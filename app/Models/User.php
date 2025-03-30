@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -18,10 +21,25 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'user_type_id',
         'email',
         'password',
     ];
+
+    public function userType(): BelongsTo
+    {
+        return $this->belongsTo(UserType::class);
+    }
+
+    public function admin()
+    {
+        return $this->hasOne(Admin::class);
+    }
+
+    public function student()
+    {
+        return $this->hasOne(Student::class);
+    }
 
     /**
      * The attributes that should be hidden for serialization.
