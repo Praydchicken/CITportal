@@ -1,81 +1,64 @@
 <script setup>
-import LoginNavbar from '../components/LoginNavbar.vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
-import { faEnvelope, faEye } from '@fortawesome/free-solid-svg-icons'
-
-import { reactive } from 'vue'
-import { router } from '@inertiajs/vue3'
-
-library.add(faEnvelope, faEye)
-
-defineProps({ errors: Object })
-
-// Vue will track changes to the form data.
-// When the user types in the form, Vue automatically updates this object.
-const form = reactive({
+// import TextLink from '../../Components/TextLink.vue';
+import InputField from '../Components/InputField.vue';
+import PrimaryBtn from '../Components/PrimaryBtn.vue';
+// import CheckBox from '../../Components/CheckBox.vue';
+import { useForm } from '@inertiajs/vue3';
+const form = useForm({
 	email: null,
 	password: null,
-})
+});
 
-function submit() {
-	router.post('/login', form)
-}
+const submit = () => {
+	form.post(route("login"), {
+		onSubmit: () => form.reset('password'),
+		onError: () => form.reset('password')
+	});
+
+};
 </script>
 
-/** TODO: MAKE A LOGIN FUNCTION */
 <template>
-	<LoginNavbar>
-		<main class="h-[87vh] overflow-hidden flex justify-center items-center">    
-			<form @submit.prevent="submit" class="card w-[25%] h-fit flex justify-center items-center gap-y-2 flex-col p-4">
-				<!-- Title -->
-				<div>
-					<h1 class="text-center text-3xl font-bold text-[#1a3047]">Welcome to CIT Portal</h1>
-				</div>
 
-				<!-- input fields -->
-				<div class="mb-4 w-full">
-					<div>
-						<div class="input-container relative">
-							<input type="email" name="email" placeholder="Enter email" v-model="form.email">
-							<!-- icon -->
-							<span class="text-[#1a3047]">
-								<font-awesome-icon icon="envelope" />
-							</span>
-						</div>
-						<!-- error message -->
-						<p v-if="errors.email" class="text-red-500 text-sm">{{ errors.email }}</p>
+	<Head title=" | Sign In"></Head>
+	<div class="flex flex-col md:flex-row min-h-screen overflow-y-auto">
+		<div class="hidden md:flex w-1/2 bg-blue-900 text-white items-center justify-center p-8">
+			<div class="text-center">
+				<h1 class="text-4xl font-bold mb-2">WELCOME TO CIT PORTAL</h1>
+				<p class="text-slate-400">Commitment to Excellence to Serve God and the Community</p>
+				
+			</div>
+		</div>
+		
+		<div class="md:w-1/2 w-full flex items-center justify-center min-h-screen p-8">
+			<form @submit.prevent="submit" class="w-full max-w-lg">
+				<div class="flex justify-center mb-6">
+                    <img src="../../../public/assets/img/cit_logo.png" alt="CIT Logo" class="h-50 w-50 object-contain pointer-events-none user-drag:none" />
+                </div>
+				<h1 class="text-4xl font-bold mb-6">Sign In</h1>
+
+				<div class="flex flex-wrap -mx-3 mb-6">
+					<div class="w-full px-3 mb-10">
+						<InputField label="Email" type="Email" placeholder="Email" icon="at" v-model="form.email"
+							:error="form.errors.email" />
 					</div>
-					
-					<div>
-						<div class="input-container">
-							<div class="relative">
-								<input type="password" name="password" placeholder="Enter password" v-model="form.password">
-								<!-- icon -->
-								<span class="text-[#1a3047]">
-									<font-awesome-icon icon="eye" />
-								</span>
-							</div>
-							<!-- error message -->
-							<p v-if="errors.password" class="text-red-500 text-sm">{{ errors.password }}</p>
-							
-							<!-- reset password -->
-							<div class="flex justify-between items-center mt-2">
-								<p class="text-sm">Forgot Password?</p>
-								<button class="underlineBtn-custom text-sm cursor-pointer underline underline-offset-1">Reset here</button>
-							</div>
+					<div class="w-full px-3 mb-10">
+						<InputField label="Password" type="password" placeholder="Password (8+ characters)" icon="key"
+							v-model="form.password" :error="form.errors.password" />
+
+						<div class="flex w-full justify-between mt-10">
+							<p routeName="register" label="Forgot Password?">Remember Me</p>
+							<p routeName="register" label="Forgot Password?">Forgot Password</p>
 						</div>
 					</div>
-					
+				</div>
+				<div class="w-full px-3 mb-3 justify-center flex">
+					<PrimaryBtn :disabled="form.processing" class="w-full py-3 disabled:opacity-50 disabled:pointer-events-none">
+						Sign In <i class="fa-solid fa-chevron-right "></i></PrimaryBtn>
 					
 				</div>
-
-				<!-- Buttons -->
-				<div class="flex flex-col items-center gap-y-4 w-full">
-					<button type="submit" class="loginBtn-custom liquid cursor-pointer w-full p-2">Login</button>
-					<button class="underlineBtn-custom cursor-pointer text-sm underline underline-offset-1">Activate SPCC Account</button>
-				</div>
+				<div class="py-3 flex items-center text-sm text-gray-800 before:flex-1 before:border-t before:border-gray-200 before:me-6 after:flex-1 after:border-t after:border-gray-200 after:ms-6">OR</div>
 			</form>
-		</main>
-	</LoginNavbar>
+		</div>
+	</div>
 </template>
