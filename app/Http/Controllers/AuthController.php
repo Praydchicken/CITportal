@@ -14,7 +14,9 @@ class AuthController extends Controller
 {
     public function create()
     {
-        return Inertia::render('Login');
+        return Inertia::render('Auth/Login', [
+            'status' => session('status')
+        ]);
     }
 
     public function store(Request $request)
@@ -47,7 +49,7 @@ class AuthController extends Controller
         }
         // If authentication fails, redirect back with an error message
         return back()->withErrors([
-            'password' => 'Invalid Password or Email.',
+            'email' => 'Invalid Password or Email.',
         ])->onlyInput('email');
     }
     public function destroy(Request $request)
