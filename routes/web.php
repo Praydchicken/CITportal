@@ -8,14 +8,8 @@ use Inertia\Inertia;
 
 // This is only for the guest
 Route::middleware('guest')->group(function () {
-
-    Route::get('/', function () {
-        return Inertia::render('Login');
-    });
-
-    Route::get('/login', [AuthController::class, 'create' ])->name('login');
-    Route::post('/login', [AuthController::class, 'store' ])->name('login');
-
+    Route::get('/', [AuthController::class, 'create' ])->name('login');
+    Route::post('/', [AuthController::class, 'store' ])->name('login');
 });
 
 // This is for the auth
