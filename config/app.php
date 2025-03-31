@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('MAIL_FROM_NAME', 'CIT PORTAL'),
 
     /*
     |--------------------------------------------------------------------------
