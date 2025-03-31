@@ -15,7 +15,7 @@ class StudentController extends Controller
      */
     public function index()
     {
-        return Inertia::render('StudentDashboard');
+        return Inertia::render('StudentDashboard', ['title' => 'Student Dashboard']);
     }
 
     /**
@@ -23,7 +23,7 @@ class StudentController extends Controller
      */
     public function create()
     {
-        //
+        
     }
 
     /**
@@ -31,7 +31,23 @@ class StudentController extends Controller
      */
     public function store(StoreStudentRequest $request)
     {
-        //
+        // $credentials = $request->validate([
+        //     'student_number' => 'required|unique:students',
+        //     'first_name' => 'required|string|max:255',
+        //     'middle_name' => 'required|string|max:255',
+        //     'last_name' => 'required|string|max:255',
+        //     'section' => 'required|string|max:255',
+        //     'year_level' => 'required|string|max:255',
+        //     'phone_number' => 'required|numeric',
+        //     'gender' => 'required|string|max:255',
+        //     'address' => 'required|string|max:255',
+        //     'enrollment_date' => 'required|string|max:255',
+        //     'email' => 'required|email|unique:users,email',
+        //     'password' => 'required|min:8',
+        // ]);
+
+        // dd($credentials);
+        
     }
 
     /**

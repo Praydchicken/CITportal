@@ -32,7 +32,7 @@ class AuthController extends Controller
         $user = Auth::user();
 
         // Redirect based on user type
-        if ($user->userType->user_type === 'admin') {
+        if ($user->userType->user_type === 'Admin') {
             return redirect()->route('admin.dashboard');
         }
 

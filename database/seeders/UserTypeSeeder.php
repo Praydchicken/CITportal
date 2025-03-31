@@ -14,8 +14,8 @@ class UserTypeSeeder extends Seeder
     public function run(): void
     {
         DB::table('user_types')->insert([
-            ['id' => 1, 'user_type' => 'Student'],
-            ['id' => 2, 'user_type' => 'Admin'],
+            ['user_type' => 'Admin'],
+            ['user_type' => 'Student'],
         ]);
     }
 }

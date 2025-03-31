@@ -14,14 +14,18 @@ return new class extends Migration
         Schema::create('students', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('section_id')->constrained()->onDelete('cascade');
+            $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
+            $table->string('student_number', 50)->uniqid();
             $table->string('first_name', 50);
             $table->string('middle_name', 50)->nullable();
             $table->string('last_name', 50);
-            $table->string('phone_number');
-            $table->enum('gender', ['Male', 'Female', 'Other']);
+            $table->string('phone_number')->default('N/A');;
+            $table->enum('gender', ['Male', 'Female', 'Others']);
             $table->text('address')->nullable();
             $table->date('enrollment_date');
             $table->enum('status', ['Active', 'Inactive', 'Graduated', 'Dropped']);
+            $table->softDeletes();
             $table->timestamps();
         });
     }

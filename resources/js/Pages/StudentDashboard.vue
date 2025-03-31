@@ -4,6 +4,5 @@ import LogoutBtn from "../components/LogoutBtn.vue";
 
 <template>
     <h1>This is the student dashboard</h1>
-
     <LogoutBtn />
 </template>

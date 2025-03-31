@@ -15,8 +15,7 @@ class AdminController extends Controller
      */
     public function index()
     {   
-        // palitan mo lang yung "AdminDashboard" mak kung saang specific vue file sya papasok if admin and ganon rin sa Student sa may StudentController
-        return Inertia::render('AdminDashboard');
+        return Inertia::render('AdminDashboard/Dashboard', ['title' => 'Admin Dashboard']);
     }
 
     /**
