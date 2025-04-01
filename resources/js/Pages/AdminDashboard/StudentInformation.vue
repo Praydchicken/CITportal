@@ -14,6 +14,7 @@ import { defineProps } from "vue";
 import { ref, watch, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
+import Swal from 'sweetalert2';
 
 library.add(faXmark);
 
@@ -82,6 +83,8 @@ const closeModal = () => {
   isModalOPen.value = false;
   selectedStudent.value = null;
   isEditMode.value = false;
+  form.reset();  // Reset form data
+  form.clearErrors();  // Clear form errors
 };
 
 
@@ -183,23 +186,33 @@ const submitForm = () => {
 };
 
 const deleteStudent = (id) => {
-  if (!confirm("Are you sure you want to delete this student?")) return;
-
-  router.delete(`/student/${id}/delete`, {
-    preserveScroll: true,
-    onSuccess: () => {
-      // Remove student from the list
-      const index = students.value.findIndex(s => s.id === id);
-      if (index !== -1) {
-        students.value.splice(index, 1);
-      }
-      showNotification('Student deleted successfully');
-    },
-    onError: (errors) => {
-      console.log("Error deleting student:", errors);
-      showNotification('Failed to delete student', 'error');
-    },
-  });
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#1a3047',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            router.delete(`/student/${id}/delete`, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Remove student from the list
+                    const index = students.value.findIndex(s => s.id === id);
+                    if (index !== -1) {
+                        students.value.splice(index, 1);
+                    }
+                    showNotification('Student deleted successfully');
+                },
+                onError: (errors) => {
+                    console.log("Error deleting student:", errors);
+                    showNotification('Failed to delete student', 'error');
+                },
+            });
+        }
+    });
 };
 
 const tableHeaders = [
@@ -289,59 +302,202 @@ const filteredStudents = computed(() => {
       <!-- Form Grid Container -->
       <div class="grid grid-cols-3 gap-4">
         <!-- 1st Row -->
-        <input type="text" name="student_number" placeholder="Enter Student No." class="input-field-add-student"
-          v-model="form.student_number">
-        <input type="text" name="first_name" placeholder="Enter First Name" class="input-field-add-student"
-          v-model="form.first_name">
-        <input type="text" name="middle_name" placeholder="Enter Middle Name" class="input-field-add-student"
-          v-model="form.middle_name">
+        <div>
+          <input 
+            type="text" 
+            name="student_number" 
+            placeholder="Enter Student No." 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.student_number }"
+            v-model="form.student_number"
+          >
+          <p v-if="form.errors.student_number" class="text-red-500 text-sm mt-1">
+            {{ form.errors.student_number }}
+          </p>
+        </div>
+
+        <div>
+          <input 
+            type="text" 
+            name="first_name" 
+            placeholder="Enter First Name" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.first_name }"
+            v-model="form.first_name"
+          >
+          <p v-if="form.errors.first_name" class="text-red-500 text-sm mt-1">
+            {{ form.errors.first_name }}
+          </p>
+        </div>
+
+        <div>
+          <input 
+            type="text" 
+            name="middle_name" 
+            placeholder="Enter Middle Name" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.middle_name }"
+            v-model="form.middle_name"
+          >
+          <p v-if="form.errors.middle_name" class="text-red-500 text-sm mt-1">
+            {{ form.errors.middle_name }}
+          </p>
+        </div>
 
         <!-- 2nd Row -->
-        <input type="text" name="last_name" placeholder="Enter Last Name" class="input-field-add-student"
-          v-model="form.last_name">
-        <select v-model="form.section" class="input-field-add-student">
-          <option value="" disabled selected>Select Section</option>
-          <option v-for="section in sections" :key="section.id" :value="section.id">
-            {{ section.section }}
-          </option>
-        </select>
+        <div>
+          <input 
+            type="text" 
+            name="last_name" 
+            placeholder="Enter Last Name" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.last_name }"
+            v-model="form.last_name"
+          >
+          <p v-if="form.errors.last_name" class="text-red-500 text-sm mt-1">
+            {{ form.errors.last_name }}
+          </p>
+        </div>
 
-        <select v-model="form.year_level" class="input-field-add-student">
-          <option value="" disabled selected>Select Year Level</option>
-          <option v-for="year in yearLevels" :key="year.id" :value="year.id">
-            {{ year.year_level }}
-          </option>
-        </select>
+        <div>
+          <select 
+            v-model="form.section" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.section }"
+          >
+            <option value="" disabled selected>Select Section</option>
+            <option v-for="section in sections" :key="section.id" :value="section.id">
+              {{ section.section }}
+            </option>
+          </select>
+          <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">
+            {{ form.errors.section }}
+          </p>
+        </div>
+
+        <div>
+          <select 
+            v-model="form.year_level" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.year_level }"
+          >
+            <option value="" disabled selected>Select Year Level</option>
+            <option v-for="year in yearLevels" :key="year.id" :value="year.id">
+              {{ year.year_level }}
+            </option>
+          </select>
+          <p v-if="form.errors.year_level" class="text-red-500 text-sm mt-1">
+            {{ form.errors.year_level }}
+          </p>
+        </div>
 
         <!-- 3rd Row -->
-        <input type="text" name="phone_number" placeholder="Enter Phone Number" class="input-field-add-student"
-          v-model="form.phone_number">
-        <select name="gender" class="input-field-add-student" v-model="form.gender">
-          <option value="" disabled selected>Select Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-          <option value="Others">Others</option>
-        </select>
-        <input type="text" name="address" placeholder="Enter Address" class="input-field-add-student"
-          v-model="form.address">
+        <div>
+          <input 
+            type="text" 
+            name="phone_number" 
+            placeholder="Enter Phone Number" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.phone_number }"
+            v-model="form.phone_number"
+          >
+          <p v-if="form.errors.phone_number" class="text-red-500 text-sm mt-1">
+            {{ form.errors.phone_number }}
+          </p>
+        </div>
+
+        <div>
+          <select 
+            name="gender" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.gender }"
+            v-model="form.gender"
+          >
+            <option value="" disabled selected>Select Gender</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Others">Others</option>
+          </select>
+          <p v-if="form.errors.gender" class="text-red-500 text-sm mt-1">
+            {{ form.errors.gender }}
+          </p>
+        </div>
+
+        <div>
+          <input 
+            type="text" 
+            name="address" 
+            placeholder="Enter Address" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.address }"
+            v-model="form.address"
+          >
+          <p v-if="form.errors.address" class="text-red-500 text-sm mt-1">
+            {{ form.errors.address }}
+          </p>
+        </div>
 
         <!-- 4th Row -->
         <div class="col-span-2">
           <label for="enrollment_date" class="block text-sm font-medium">Enrollment Date</label>
-          <input type="date" name="enrollment_date" class="input-field-add-student" v-model="form.enrollment_date">
+          <input 
+            type="date" 
+            name="enrollment_date" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.enrollment_date }"
+            v-model="form.enrollment_date"
+          >
+          <p v-if="form.errors.enrollment_date" class="text-red-500 text-sm mt-1">
+            {{ form.errors.enrollment_date }}
+          </p>
         </div>
-        <select name="status" class="input-field-add-student" v-model="form.status">
-          <option value="" disabled selected>Select Status</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-          <option value="Graduated">Graduated</option>
-          <option value="Dropped">Dropped</option>
-        </select>
+
+        <div>
+          <select 
+            name="status" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.status }"
+            v-model="form.status"
+          >
+            <option value="" disabled selected>Select Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Graduated">Graduated</option>
+            <option value="Dropped">Dropped</option>
+          </select>
+          <p v-if="form.errors.status" class="text-red-500 text-sm mt-1">
+            {{ form.errors.status }}
+          </p>
+        </div>
 
         <!-- 5th Row -->
-        <input type="text" name="email" placeholder="Enter Email" class="input-field-add-student" v-model="form.email">
-        <input type="password" name="password" placeholder="Enter Password" class="input-field-add-student"
-          v-model="form.password">
+        <div>
+          <input 
+            type="text" 
+            name="email" 
+            placeholder="Enter Email" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.email }"
+            v-model="form.email"
+          >
+          <p v-if="form.errors.email" class="text-red-500 text-sm mt-1">
+            {{ form.errors.email }}
+          </p>
+        </div>
+
+        <div>
+          <input 
+            type="password" 
+            name="password" 
+            placeholder="Enter Password" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.password }"
+            v-model="form.password"
+          >
+          <p v-if="form.errors.password" class="text-red-500 text-sm mt-1">
+            {{ form.errors.password }}
+          </p>
+        </div>
         <div></div> <!-- Empty cell for alignment -->
       </div>
     </ReusableModal>

@@ -32,6 +32,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
     Route::put('/student/{student}/update', [PostStudentInfoController::class, 'update']);
     Route::get('/admin/section/management', [PostSectionManagementController::class,'index'])->name('admin.section.management');
+    Route::post('/section/add', [PostSectionManagementController::class, 'store'])->name('section.store');
+    Route::put('/section/{section}', [PostSectionManagementController::class, 'update'])->name('section.update');
+    Route::delete('/section/{section}', [PostSectionManagementController::class, 'destroy'])->name('section.destroy');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
