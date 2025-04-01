@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
             $table->string('section');
+            $table->string('minimum_number_students');
+            $table->string('maximum_number_students');
             $table->timestamps();
         });
     }

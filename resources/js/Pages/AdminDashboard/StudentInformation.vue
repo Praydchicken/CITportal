@@ -1,6 +1,9 @@
 <script setup>
 import DashboardLayout from '../../components/AdminDashboardLayout.vue';
 import Overlay from '../../components/Overlay.vue';
+import ReusableTable from '../../components/ReusableTable.vue';
+import ReusableModal from '../../components/ReusableModal.vue';
+import Notification from '../../components/Notification.vue';
 
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -8,8 +11,9 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { useForm } from '@inertiajs/vue3'
 import { defineProps } from "vue";
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
+import { reactive } from 'vue';
 
 library.add(faXmark);
 
@@ -24,23 +28,30 @@ const props = defineProps({
   yearLevels: Array
 });
 
-const sections = ref(props.sections);
+const sections = ref([
+  { id: 1, section: 'A' },
+  { id: 2, section: 'B' },
+  { id: 3, section: 'C' },
+  { id: 4, section: 'D' }
+]);
 const yearLevels = ref(props.yearLevels);
 const students = ref(props.students);
 const isEditMode = ref(false);
 const selectedStudent = ref(null);
 const loading = ref(false);
+const searchQuery = ref('');
 
-
-
+// Watch for props.students changes and maintain the order
 watch(() => props.students, (newStudents) => {
-  students.value = newStudents; // ✅ Update students if props change
+  if (newStudents) {
+    students.value = newStudents;
+  }
 });
 
 const isModalOPen = ref(false);
 
 const openModal = (student) => {
-  if (student) {   
+  if (student) {
     isEditMode.value = true; // We're editing
     selectedStudent.value = student;
 
@@ -58,7 +69,7 @@ const openModal = (student) => {
     form.status = student.status;
     form.email = student.user?.email || "";
     form.password = ""; // Keep password empty for security
-  } else{
+  } else {
     isEditMode.value = false; // Adding new student
     form.reset(); // Clear form
   }
@@ -91,180 +102,248 @@ const form = useForm({
   remember: false,
 })
 
+// Create a reactive object for the notification state
+const notification = reactive({
+  show: false,
+  message: '',
+  type: 'success'
+});
+
+// Function to show the notification
+const showNotification = (message, type = 'success') => {
+  notification.show = false; // Reset first
+  setTimeout(() => {
+    notification.message = message;
+    notification.type = type;
+    notification.show = true;
+  }, 50);
+
+  // Auto-hide notification after 2.5s
+  setTimeout(() => {
+    notification.show = false;
+  }, 2500);
+};
+
 const submitForm = () => {
   loading.value = true;
   if (isEditMode.value && selectedStudent.value) {
     // Update existing student
     form.put(`/student/${selectedStudent.value.id}/update`, {
       preserveScroll: true,
-      onSuccess: () => {
-        router.reload();
+      onSuccess: (response) => {
+        // Find and update the edited student
+        const editedStudentIndex = students.value.findIndex(s => s.id === selectedStudent.value.id);
+        if (editedStudentIndex !== -1) {
+          const updatedStudent = {
+            ...students.value[editedStudentIndex],
+            ...form._data
+          };
+          // Remove the student from current position and add to top
+          students.value.splice(editedStudentIndex, 1);
+          students.value.unshift(updatedStudent);
+          showNotification('Student updated successfully');
+        }
         form.reset();
         closeModal();
       },
       onError: (errors) => {
         console.log("Validation Errors:", errors);
+        showNotification('Failed to update student', 'error');
       },
-       onFinish: () => {
-        loading.value = false; // Stop loading after request finishes
+      onFinish: () => {
+        loading.value = false;
       }
     });
   } else {
     // Add new student
     form.post('/student/addInfo', {
       preserveScroll: true,
-      onSuccess: () => {
-        router.reload();
+      onSuccess: (response) => {
+        // Show notification first
+        showNotification('Student added successfully');
+        
+        // Then update the UI
+        if (response?.student) {
+          students.value.unshift(response.student);
+        }
+        
+        // Finally close the modal and reset form
         form.reset();
         closeModal();
       },
       onError: (errors) => {
         console.log("Validation Errors:", errors);
+        showNotification('Failed to add student', 'error');
       },
       onFinish: () => {
-        loading.value = false; // Stop loading after request finishes
+        loading.value = false;
       }
     });
   }
 };
 
-
-
 const deleteStudent = (id) => {
-  if (!confirm("Are you sure you want to delete this student?")) return; // ✅ Show confirmation dialog
+  if (!confirm("Are you sure you want to delete this student?")) return;
 
   router.delete(`/student/${id}/delete`, {
     preserveScroll: true,
     onSuccess: () => {
-      router.reload(); // ✅ Reload the page to update the student list
+      // Remove student from the list
+      const index = students.value.findIndex(s => s.id === id);
+      if (index !== -1) {
+        students.value.splice(index, 1);
+      }
+      showNotification('Student deleted successfully');
     },
     onError: (errors) => {
       console.log("Error deleting student:", errors);
+      showNotification('Failed to delete student', 'error');
     },
   });
 };
+
+const tableHeaders = [
+  { key: 'student_number', label: 'Student No.' },
+  { key: 'user.email', label: 'Email Address' },
+  { key: 'first_name', label: 'First Name' },
+  { key: 'middle_name', label: 'Middle Name' },
+  { key: 'last_name', label: 'Last Name' },
+  { key: 'section.section', label: 'Section' },
+  { key: 'year_level.year_level', label: 'Year Level' },
+  { key: 'status', label: 'Status' }
+];
+
+const actionButtons = [
+  {
+    label: 'Edit',
+    class: 'bg-[#559de6] text-white px-3 py-1 rounded cursor-pointer',
+    action: (student) => openModal(student)
+  },
+  {
+    label: 'Delete',
+    class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer',
+    action: (student) => deleteStudent(student.id)
+  }
+];
+
+// Modify the ReusableTable component to handle nested properties
+const processNestedValue = (item, key) => {
+  return key.split('.').reduce((obj, k) => obj?.[k], item) || 'N/A';
+};
+
+// Computed property for filtered students
+const filteredStudents = computed(() => {
+  if (!searchQuery.value) return students.value;
+  
+  const query = searchQuery.value.toLowerCase();
+  return students.value.filter(student => {
+    return (
+      (student.student_number && student.student_number.toLowerCase().includes(query)) ||
+      (student.first_name && student.first_name.toLowerCase().includes(query)) ||
+      (student.middle_name && student.middle_name.toLowerCase().includes(query)) ||
+      (student.last_name && student.last_name.toLowerCase().includes(query)) ||
+      (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
+      (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
+      (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
+      (student.status && student.status.toLowerCase().includes(query))
+    );
+  });
+});
 
 </script>
 
 <template>
   <div class="relative">
+    <!-- Notification using teleport to ensure it's always on top -->
+    <Teleport to="body">
+      <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
+    </Teleport>
+
     <Overlay :show="isModalOPen" @click="closeModal" />
     <div class="flex justify-between items-center">
-      <form>
-        <input style="outline: none;" type="text" placeholder="Search for students..." class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]">
+      <form @submit.prevent>
+        <input 
+          v-model="searchQuery"
+          type="text" 
+          placeholder="Search for students..." 
+          class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]"
+        >
       </form>
-      <button @click="openModal(null)" class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">Add New Students</button>
+      <button @click="openModal(null)" 
+        class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+        Add New Students
+      </button>
     </div>
 
-    <!-- table for students -->
-    <div class="w-full">
-      <table class="w-full border-separate border-spacing-y-6 text-center">
-        <!-- Table Head -->
-        <thead>
-          <tr class="bg-[#1a3047] text-[#ffff] rounded-lg">
-            <th class="p-4 rounded-l-lg">Student No.</th>
-            <th class="p-4">Email Address</th>
-            <th class="p-4">First Name</th>
-            <th class="p-4">Middle Name</th>
-            <th class="p-4">Last Name</th>
-            <th class="p-4">Section</th>
-            <th class="p-4">Year Level</th>
-            <th class="p-4">Status</th>
-            <th class="p-4 rounded-r-lg">Action</th>
-          </tr>
-        </thead>
+    <!-- Reusable Table Component -->
+    <ReusableTable 
+      :headers="tableHeaders" 
+      :data="filteredStudents" 
+      :actions="true" 
+      :action-buttons="actionButtons" 
+    />
 
-        <!-- Table Body -->
-        <tbody>
-          <tr v-for="student in students" :key="student.id" class="bg-gray-200 shadow-md rounded-lg">
-            <td class="p-4 rounded-l-lg">{{ student.student_number }}</td>
-            <td class="p-4">{{ student.user?.email || "N/A" }}</td>
-            <td class="p-4">{{ student.first_name }} </td>
-            <td class="p-4">{{ student.middle_name ? student.middle_name : 'N/A' }} </td>
-            <td class="p-4">{{ student.last_name }} </td>
-            <td class="p-4">{{ student.section?.section || "N/A" }}</td>
-            <td class="p-4">{{ student.year_level?.year_level || "N/A" }}</td>
-            <td class="p-4">{{ student.status || "N/A" }}</td>
-            <td class="p-4 rounded-r-lg">
-              <ul class="flex justify-center items-center gap-x-3">
-                <li><button @click="openModal(student)" class="bg-[#559de6] text-white px-3 py-1 rounded cursor-pointer">Edit</button></li>
-                <li><button @click="deleteStudent(student.id)"  class="bg-red-500 text-white px-3 py-1 rounded cursor-pointer">Delete</button></li>
-              </ul>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <!-- Reusable Modal Component -->
+    <ReusableModal :show="isModalOPen" :title="isEditMode ? 'Edit Student' : 'Add Student'" :loading="loading"
+      :submit-button-text="isEditMode ? 'Edit Student' : 'Add Student'" @close="closeModal" @submit="submitForm">
+      <!-- Form Grid Container -->
+      <div class="grid grid-cols-3 gap-4">
+        <!-- 1st Row -->
+        <input type="text" name="student_number" placeholder="Enter Student No." class="input-field-add-student"
+          v-model="form.student_number">
+        <input type="text" name="first_name" placeholder="Enter First Name" class="input-field-add-student"
+          v-model="form.first_name">
+        <input type="text" name="middle_name" placeholder="Enter Middle Name" class="input-field-add-student"
+          v-model="form.middle_name">
 
-     <!-- Modal -->
-    <transition name="slide">
-      <form @submit.prevent="submitForm" v-if="isModalOPen" class="card fixed z-40 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-6 w-[600px]">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-xl font-semibold text-center mb-4">{{ isEditMode ? "Edit Student" : "Add Student" }}</h2>
-            <button @click.prevent="closeModal" class="text-xl cursor-pointer bg-[#1a3047] text-[#ffff] hover:bg-[#559de6] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center"><font-awesome-icon icon="xmark" /></button>
-          </div>
-          
+        <!-- 2nd Row -->
+        <input type="text" name="last_name" placeholder="Enter Last Name" class="input-field-add-student"
+          v-model="form.last_name">
+        <select v-model="form.section" class="input-field-add-student">
+          <option value="" disabled selected>Select Section</option>
+          <option v-for="section in sections" :key="section.id" :value="section.id">
+            {{ section.section }}
+          </option>
+        </select>
 
-          <!-- Form Grid Container -->
-          <div class="grid grid-cols-3 gap-4">
-              <!-- 1st Row -->
-              <input type="text" name="student_number" placeholder="Enter Student No." class="input-field-add-student" v-model="form.student_number">
-              <input type="text" name="first_name" placeholder="Enter First Name" class="input-field-add-student" v-model="form.first_name">
-              <input type="text" name="middle_name" placeholder="Enter Middle Name" class="input-field-add-student" v-model="form.middle_name">
+        <select v-model="form.year_level" class="input-field-add-student">
+          <option value="" disabled selected>Select Year Level</option>
+          <option v-for="year in yearLevels" :key="year.id" :value="year.id">
+            {{ year.year_level }}
+          </option>
+        </select>
 
-              <!-- 2nd Row -->
-              <input type="text" name="last_name" placeholder="Enter Last Name" class="input-field-add-student" v-model="form.last_name">
-              <select v-model="form.section" class="input-field-add-student">
-                <option value="" disabled selected>Select Section</option>
-                <option v-for="section in sections" :key="section.id" :value="section.id">
-                  {{ section.section }}
-                </option>
-              </select>
+        <!-- 3rd Row -->
+        <input type="text" name="phone_number" placeholder="Enter Phone Number" class="input-field-add-student"
+          v-model="form.phone_number">
+        <select name="gender" class="input-field-add-student" v-model="form.gender">
+          <option value="" disabled selected>Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Others">Others</option>
+        </select>
+        <input type="text" name="address" placeholder="Enter Address" class="input-field-add-student"
+          v-model="form.address">
 
-              <select v-model="form.year_level" class="input-field-add-student">
-                <option value="" disabled selected>Select Year Level</option>
-                <option v-for="year in yearLevels" :key="year.id" :value="year.id">
-                  {{ year.year_level }}
-                </option>
-              </select>
+        <!-- 4th Row -->
+        <div class="col-span-2">
+          <label for="enrollment_date" class="block text-sm font-medium">Enrollment Date</label>
+          <input type="date" name="enrollment_date" class="input-field-add-student" v-model="form.enrollment_date">
+        </div>
+        <select name="status" class="input-field-add-student" v-model="form.status">
+          <option value="" disabled selected>Select Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+          <option value="Graduated">Graduated</option>
+          <option value="Dropped">Dropped</option>
+        </select>
 
-              <!-- 3rd Row -->
-              <input type="text" name="phone_number" placeholder="Enter Phone Number" class="input-field-add-student" v-model="form.phone_number">
-              <select name="gender" class="input-field-add-student" v-model="form.gender">
-                  <option value="" disabled selected>Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Others">Others</option>
-              </select>
-              <input type="text" name="address" placeholder="Enter Address" class="input-field-add-student" v-model="form.address">
-
-              <!-- 4th Row -->
-              <div class="col-span-2">
-                  <label for="enrollment_date" class="block text-sm font-medium">Enrollment Date</label>
-                  <input type="date" name="enrollment_date" class="input-field-add-student" v-model="form.enrollment_date">
-              </div>
-              <select name="status" class="input-field-add-student" v-model="form.status">
-                  <option value="" disabled selected>Select Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Graduated">Graduated</option>
-                  <option value="Dropped">Dropped</option>
-              </select>
-
-              <!-- 5th Row -->
-              <input type="text" name="email" placeholder="Enter Email" class="input-field-add-student" v-model="form.email">
-              <input type="password" name="password" placeholder="Enter Password" class="input-field-add-student" v-model="form.password">
-              <div></div> <!-- Empty cell for alignment -->
-          </div>
-
-          <!-- Submit Button -->
-          <button type="submit" class="w-full bg-[#1a3047] cursor-pointer hover:bg-[#559de6] text-white py-2 mt-6 rounded-md font-semibold transition">
-            <span v-if="loading">Saving...</span>
-            <span v-else>{{ isEditMode ? "Edit Student" : "Add Student" }}</span>
-          </button>
-      </form>
-    </transition>
-
-    <!-- overlay -->
+        <!-- 5th Row -->
+        <input type="text" name="email" placeholder="Enter Email" class="input-field-add-student" v-model="form.email">
+        <input type="password" name="password" placeholder="Enter Password" class="input-field-add-student"
+          v-model="form.password">
+        <div></div> <!-- Empty cell for alignment -->
+      </div>
+    </ReusableModal>
   </div>
 </template>

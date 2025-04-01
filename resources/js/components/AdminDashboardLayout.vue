@@ -15,7 +15,8 @@ const adminLinks = [
   { name: "Dashboard", url: route('admin.dashboard') },
   { name: "Student Information", url: route('student.info') },
   { name: "Faculty Load", url: "#" },
-  { name: "Schedule & Section Management", url: "#" },
+  { name: "Section Management", url: route('admin.section.management') },
+  { name: "Schedule  Management", url: "#" },
   { name: "Curriculum Configuration", url: "#" },
   { name: "Admin Announcement", url: "#" },
 ];
@@ -33,12 +34,12 @@ const headerContent = [
   <div class="dashboard-container relative">
     <DashboardSideNav :links="adminLinks" />
     <main class="w-screen h-screen pl-[20%]">
-        <div class="h-screen p-10">
-            <DashboardHeader :content="headerContent" />
-            <div class="mt-24">
-                <slot /> <!-- Renders page content here -->
-            </div>
+      <div class="h-screen p-10">
+        <DashboardHeader :content="headerContent" />
+        <div class="mt-24">
+          <slot /> <!-- Renders page content here -->
         </div>
+      </div>
     </main>
   </div>
 </template>

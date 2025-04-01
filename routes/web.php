@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PostSectionManagementController;
 use App\Http\Controllers\PostStudentInfoController;
 use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
@@ -30,7 +31,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
     Route::delete('/student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
     Route::put('/student/{student}/update', [PostStudentInfoController::class, 'update']);
-
+    Route::get('/admin/section/management', [PostSectionManagementController::class,'index'])->name('admin.section.management');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');

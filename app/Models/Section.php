@@ -5,18 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 
 class Section extends Model
 {
     /** @use HasFactory<\Database\Factories\SectionFactory> */
     use HasFactory;
 
-    protected $fillable = [
-        'section',
-    ];
+    protected $fillable = ['year_level_id', 'section', 'minimum_number_students', 'maximum_number_students'];
 
-    public function students(): HasMany
+    public function yearLevel(): BelongsTo
     {
-        return $this->hasMany(Student::class, 'section_id');
+        return $this->belongsTo(YearLevel::class); // Each section belongs to a year level
     }
 }

@@ -19,4 +19,9 @@ class YearLevel extends Model
     {
         return $this->hasMany(Student::class, 'year_level_id');
     }
+
+    public function sections()
+    {
+        return $this->hasMany(Section::class); // One year level has many sections
+    }
 }
