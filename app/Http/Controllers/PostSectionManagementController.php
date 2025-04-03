@@ -10,7 +10,7 @@ use App\Models\YearLevel;
 class PostSectionManagementController extends Controller
 {
     public function index()
-    {
+    {   
         $sections = Section::with('yearLevel')
             ->select('sections.*')
             ->join('year_levels', 'sections.year_level_id', '=', 'year_levels.id')

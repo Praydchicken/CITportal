@@ -3,6 +3,7 @@ import DashboardSideNav from '../components/DashboardSideNav.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 
 import { usePage } from '@inertiajs/vue3';
+import { route } from 'ziggy-js';
 
 defineProps({
   title: String
@@ -16,8 +17,8 @@ const adminLinks = [
   { name: "Student Information", url: route('student.info') },
   { name: "Faculty Load", url: "#" },
   { name: "Section Management", url: route('admin.section.management') },
-  { name: "Schedule  Management", url: "#" },
-  { name: "Curriculum Configuration", url: "#" },
+  { name: "Schedule  Management", url: route('admin.schedule.management') },
+  { name: "Curriculum Configuration", url: route('admin.curriculum.config') },
   { name: "Admin Announcement", url: "#" },
 ];
 

@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PostCurriculumConfigController;
+use App\Http\Controllers\PostScheduleManagementController;
 use App\Http\Controllers\PostSectionManagementController;
 use App\Http\Controllers\PostStudentInfoController;
 use App\Http\Controllers\StudentController;
@@ -35,6 +37,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/section/add', [PostSectionManagementController::class, 'store'])->name('section.store');
     Route::put('/section/{section}', [PostSectionManagementController::class, 'update'])->name('section.update');
     Route::delete('/section/{section}', [PostSectionManagementController::class, 'destroy'])->name('section.destroy');
+
+    // Schedule Management Routes
+    Route::get('/admin/schedule/management', [PostScheduleManagementController::class, 'index'])->name('admin.schedule.management');
+    Route::post('/curriculum/subject/add', [PostCurriculumConfigController::class, 'store']);
+    Route::put('/curriculum/subject/{id}/update', [PostCurriculumConfigController::class, 'update']);
+    Route::delete('/curriculum/subject/{id}/delete', [PostCurriculumConfigController::class, 'destroy']);
+
+    // Curriculum Management Routes
+     Route::get('/admin/curriculum/config', [PostCurriculumConfigController::class, 'index'])->name('admin.curriculum.config');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');

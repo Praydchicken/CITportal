@@ -24,4 +24,8 @@ class YearLevel extends Model
     {
         return $this->hasMany(Section::class); // One year level has many sections
     }
+
+    public function curricula() {
+        return $this->hasMany(Curriculum::class);
+    }
 }
