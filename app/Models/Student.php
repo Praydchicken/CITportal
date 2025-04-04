@@ -20,6 +20,7 @@ class Student extends Model
         'user_id',
         'section_id',
         'year_level_id',
+        'student_status_id',
         'student_number',
         'first_name',
         'middle_name',
@@ -28,7 +29,6 @@ class Student extends Model
         'gender',
         'address',
         'enrollment_date',
-        'status'
     ];
 
      public function user(): BelongsTo
@@ -42,6 +42,11 @@ class Student extends Model
 
     public function yearLevel(): BelongsTo{
         return $this->belongsTo(YearLevel::class);
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(StudentStatus::class, 'student_status_id');
     }
 
     protected static function booted()

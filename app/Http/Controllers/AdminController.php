@@ -3,9 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Admin;
+use App\Models\Student;
 use App\Http\Requests\StoreAdminRequest;
 use App\Http\Requests\UpdateAdminRequest;
-
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -15,7 +16,22 @@ class AdminController extends Controller
      */
     public function index()
     {   
-        return Inertia::render('AdminDashboard/Dashboard', ['title' => 'Admin Dashboard']);
+        $stats = [
+            'enrolled' => Student::whereHas('status', function($query) {
+                $query->where('status_name', 'Enrolled');
+            })->count(),
+            'dropped' => Student::whereHas('status', function($query) {
+                $query->where('status_name', 'Dropped');
+            })->count(),
+            'graduated' => Student::whereHas('status', function($query) {
+                $query->where('status_name', 'Graduated');
+            })->count(),
+        ];
+
+        return Inertia::render('AdminDashboard/Dashboard', [
+            'title' => 'Admin Dashboard',
+            'stats' => $stats
+        ]);
     }
 
     /**

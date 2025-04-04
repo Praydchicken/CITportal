@@ -26,7 +26,8 @@ const props = defineProps({
   title: String,
   students: Array,
   sections: Array,
-  yearLevels: Array
+  yearLevels: Array,
+  studentStatuses: Array
 });
 
 const sections = ref([
@@ -67,7 +68,7 @@ const openModal = (student) => {
     form.gender = student.gender;
     form.address = student.address;
     form.enrollment_date = student.enrollment_date;
-    form.status = student.status;
+    form.student_status_id = student.status?.id || "";
     form.email = student.user?.email || "";
     form.password = ""; // Keep password empty for security
   } else {
@@ -99,7 +100,7 @@ const form = useForm({
   gender: "",
   address: null,
   enrollment_date: null,
-  status: "",
+  student_status_id: "",
   email: null,
   password: null,
   remember: false,
@@ -223,7 +224,7 @@ const tableHeaders = [
   { key: 'last_name', label: 'Last Name' },
   { key: 'section.section', label: 'Section' },
   { key: 'year_level.year_level', label: 'Year Level' },
-  { key: 'status', label: 'Status' }
+  { key: 'status.status_name', label: 'Status' }
 ];
 
 const actionButtons = [
@@ -258,7 +259,7 @@ const filteredStudents = computed(() => {
       (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
       (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
       (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
-      (student.status && student.status.toLowerCase().includes(query))
+      (student.status?.status_name && student.status.status_name.toLowerCase().includes(query))
     );
   });
 });
@@ -454,19 +455,22 @@ const filteredStudents = computed(() => {
 
         <div>
           <select 
-            name="status" 
+            name="student_status_id" 
             class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.status }"
-            v-model="form.status"
+            :class="{ 'border-red-500': form.errors.student_status_id }"
+            v-model="form.student_status_id"
           >
             <option value="" disabled selected>Select Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Graduated">Graduated</option>
-            <option value="Dropped">Dropped</option>
+            <option 
+              v-for="status in studentStatuses" 
+              :key="status.id" 
+              :value="status.id"
+            >
+              {{ status.status_name }}
+            </option>
           </select>
-          <p v-if="form.errors.status" class="text-red-500 text-sm mt-1">
-            {{ form.errors.status }}
+          <p v-if="form.errors.student_status_id" class="text-red-500 text-sm mt-1">
+            {{ form.errors.student_status_id }}
           </p>
         </div>
 

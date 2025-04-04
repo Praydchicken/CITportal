@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('section_id')->constrained()->onDelete('cascade');
             $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
+            $table->foreignId('student_status_id')->constrained()->onDelete('cascade');
             $table->string('student_number', 50)->uniqid();
             $table->string('first_name', 50);
             $table->string('middle_name', 50)->nullable();
@@ -24,7 +25,6 @@ return new class extends Migration
             $table->enum('gender', ['Male', 'Female', 'Others']);
             $table->text('address')->nullable();
             $table->date('enrollment_date');
-            $table->enum('status', ['Active', 'Inactive', 'Graduated', 'Dropped']);
             $table->softDeletes();
             $table->timestamps();
         });
