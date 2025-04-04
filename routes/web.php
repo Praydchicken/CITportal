@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminAnnouncementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PostCurriculumConfigController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\PostScheduleManagementController;
 use App\Http\Controllers\PostSectionManagementController;
 use App\Http\Controllers\PostStudentInfoController;
 use App\Http\Controllers\StudentController;
+use App\Models\AdminAnnouncement;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -45,7 +47,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/curriculum/subject/{id}/delete', [PostCurriculumConfigController::class, 'destroy']);
 
     // Curriculum Management Routes
-     Route::get('/admin/curriculum/config', [PostCurriculumConfigController::class, 'index'])->name('admin.curriculum.config');
+    Route::get('/admin/curriculum/config', [PostCurriculumConfigController::class, 'index'])->name('admin.curriculum.config');
+
+    // Admin Announce Routes
+    Route::get('/admin/announcement', [AdminAnnouncementController::class, 'index'])->name('admin.announcement');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');

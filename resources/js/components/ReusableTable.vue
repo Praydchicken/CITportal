@@ -68,4 +68,4 @@ const getValue = (item, key) => {
       </tbody>
     </table>
   </div>
-</template> 
+</template>  

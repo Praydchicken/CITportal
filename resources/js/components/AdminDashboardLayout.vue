@@ -19,7 +19,7 @@ const adminLinks = [
   { name: "Section Management", url: route('admin.section.management') },
   { name: "Schedule  Management", url: route('admin.schedule.management') },
   { name: "Curriculum Configuration", url: route('admin.curriculum.config') },
-  { name: "Admin Announcement", url: "#" },
+  { name: "Admin Announcement", url: route('admin.announcement') },
 ];
 
 const headerContent = [
