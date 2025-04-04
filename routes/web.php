@@ -51,6 +51,10 @@ Route::middleware('auth')->group(function () {
 
     // Admin Announce Routes
     Route::get('/admin/announcement', [AdminAnnouncementController::class, 'index'])->name('admin.announcement');
+    Route::post('/admin/add/announcement', [AdminAnnouncementController::class, 'store']);
+    Route::post('/admin/announcement', [AdminAnnouncementController::class, 'store'])->name('admin.announcement.store');
+    Route::put('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'update'])->name('admin.announcement.update');
+    Route::delete('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'destroy'])->name('admin.announcement.destroy');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');

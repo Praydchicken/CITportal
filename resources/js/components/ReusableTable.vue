@@ -1,4 +1,4 @@
-<script setup>
+ <script setup>
 import { defineProps } from 'vue';
 
 const props = defineProps({
@@ -68,4 +68,4 @@ const getValue = (item, key) => {
       </tbody>
     </table>
   </div>
-</template>  
+</template> 
