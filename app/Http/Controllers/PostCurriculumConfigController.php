@@ -12,7 +12,7 @@ class PostCurriculumConfigController extends Controller
 {
     public function index()
     {
-        $subjects = Curriculum::with(['yearLevel', 'semester'])->latest()->get();
+        $subjects = Curriculum::with(['year_level', 'semester'])->latest()->get();
         $yearLevels = YearLevel::all();
         $semesters = Semester::all();
 

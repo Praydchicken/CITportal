@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Curriculum extends Model
 {
@@ -22,11 +23,16 @@ class Curriculum extends Model
         'total_units'
     ];
 
-    public function yearLevel(): BelongsTo {
+    public function year_level(): BelongsTo {
         return $this->belongsTo(YearLevel::class);
     }
 
     public function semester(): BelongsTo {
         return $this->belongsTo(Semester::class);
+    }
+
+    public function studentGrades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class);
     }
 }

@@ -20,12 +20,19 @@ class YearLevel extends Model
         return $this->hasMany(Student::class, 'year_level_id');
     }
 
-    public function sections()
+    public function sections(): HasMany
     {
         return $this->hasMany(Section::class); // One year level has many sections
     }
 
-    public function curricula() {
+    public function curricula(): HasMany 
+    {
         return $this->hasMany(Curriculum::class);
     }
+
+    public function studentGrades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class);
+    }
+
 }

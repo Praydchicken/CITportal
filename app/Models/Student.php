@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Student extends Model
@@ -21,6 +22,7 @@ class Student extends Model
         'section_id',
         'year_level_id',
         'student_status_id',
+        'school_year_id',
         'student_number',
         'first_name',
         'middle_name',
@@ -48,6 +50,17 @@ class Student extends Model
     {
         return $this->belongsTo(StudentStatus::class, 'student_status_id');
     }
+    
+    public function schoolYear(): BelongsTo
+    {
+        return $this->belongsTo(SchoolYear::class);
+    }
+
+    public function studentGrades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class);
+    }
+
 
     protected static function booted()
     {

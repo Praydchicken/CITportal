@@ -6,17 +6,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Semester extends Model
+class SchoolYear extends Model
 {
-    /** @use HasFactory<\Database\Factories\SemesterFactory> */
+    /** @use HasFactory<\Database\Factories\SchoolYearFactory> */
     use HasFactory;
 
     protected $fillable = [
-        'semester_name',
+        'school_year',
+        'school_year_status'
     ];
 
-     public function curricula(): HasMany {
-        return $this->hasMany(Curriculum::class);
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
     }
 
     public function studentGrades(): HasMany

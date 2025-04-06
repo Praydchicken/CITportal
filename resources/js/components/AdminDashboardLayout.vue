@@ -15,9 +15,10 @@ const page = usePage();
 const adminLinks = [
   { name: "Dashboard", url: route('admin.dashboard') },
   { name: "Student Information", url: route('student.info') },
-  { name: "Faculty Load", url: "#" },
+  { name: "Faculty Load", url: route('admin.faculty.load') },
+  { name: "Grade Report", url: route('admin.student.grade') },
   { name: "Section Management", url: route('admin.section.management') },
-  { name: "Schedule  Management", url: route('admin.schedule.management') },
+  // { name: "Schedule  Management", url: route('admin.schedule.management') },
   { name: "Curriculum Configuration", url: route('admin.curriculum.config') },
   { name: "Admin Announcement", url: route('admin.announcement') },
 ];

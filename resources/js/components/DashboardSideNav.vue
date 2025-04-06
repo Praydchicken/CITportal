@@ -18,9 +18,9 @@ defineProps({
             <h1 class="font-bold text-2xl">CIT PORTAL</h1>
         </div>
 
-        <div>
+        <!-- <div>
             <button class="text-xl text-[#1a3047] bg-[#ffff] rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center cursor-pointer"><font-awesome-icon icon="angle-left" /></button>
-        </div>
+        </div> -->
     </div>
     <ul class="mt-4 flex flex-col gap-y-8 p-5">
       <li v-for="link in links" :key="link.name">

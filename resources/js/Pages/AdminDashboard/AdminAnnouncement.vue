@@ -108,6 +108,7 @@ watch(() => props.sections, (newSections) => {
 // Filter sections based on selected year level
 const filteredSections = computed(() => {
   if (!form.year_level_id) return [];
+  if (form.year_level_id === 'all') return sections.value; // Return all sections if "All Year Levels" is selected
   
   // Filter sections for the selected year level
   return sections.value.filter(section => 
@@ -118,8 +119,13 @@ const filteredSections = computed(() => {
 // Get unique section letters for the selected year level
 const uniqueSections = computed(() => {
   if (!form.year_level_id) return [];
+  if (form.year_level_id === 'all') {
+    // Get all unique section letters across all year levels
+    const sectionLetters = new Set(sections.value.map(section => section.section));
+    return Array.from(sectionLetters).sort();
+  }
   
-  // Get unique section letters
+  // Get unique section letters for the selected year level
   const sectionLetters = new Set(
     filteredSections.value.map(section => section.section)
   );
@@ -294,6 +300,7 @@ const clearFilters = () => {
               class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 w-full"
             >
               <option value="">Select Year Level</option>
+              <option value="all">All Year Levels</option>
               <option 
                 v-for="year in yearLevels" 
                 :key="year.id" 
@@ -314,6 +321,7 @@ const clearFilters = () => {
               :disabled="!form.year_level_id"
             >
               <option value="">Select Section</option>
+              <option value="all">All Sections</option>
               <option 
                 v-for="section in uniqueSections" 
                 :key="section" 
@@ -412,20 +420,37 @@ const clearFilters = () => {
             
             <!-- Year Levels and Sections -->
             <div class="flex flex-wrap gap-2 mb-2">
-              <span 
-                v-for="yearLevel in announcement.year_levels" 
-                :key="yearLevel"
-                class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-              >
-                {{ yearLevel }}
-              </span>
-              <span 
-                v-for="section in announcement.sections" 
-                :key="section"
-                class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm"
-              >
-                Section {{ section }}
-              </span>
+              <!-- Year Levels -->
+              <template v-if="announcement.year_levels.length === yearLevels.length">
+                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                  All year levels
+                </span>
+              </template>
+              <template v-else>
+                <span 
+                  v-for="yearLevel in announcement.year_levels" 
+                  :key="yearLevel"
+                  class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                >
+                  {{ yearLevel }}
+                </span>
+              </template>
+
+              <!-- Sections -->
+              <template v-if="announcement.sections.length === sections.length">
+                <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
+                  All sections
+                </span>
+              </template>
+              <template v-else>
+                <span 
+                  v-for="section in announcement.sections" 
+                  :key="section"
+                  class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                >
+                  Section {{ section }}
+                </span>
+              </template>
             </div>
             
             <!-- Published Date and Actions -->

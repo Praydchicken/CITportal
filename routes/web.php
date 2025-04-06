@@ -3,12 +3,15 @@
 use App\Http\Controllers\AdminAnnouncementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FacultyLoadController;
 use App\Http\Controllers\PostCurriculumConfigController;
 use App\Http\Controllers\PostScheduleManagementController;
 use App\Http\Controllers\PostSectionManagementController;
 use App\Http\Controllers\PostStudentInfoController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\StudentGradeController;
 use App\Models\AdminAnnouncement;
+use App\Models\FacultyLoad;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -55,6 +58,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/announcement', [AdminAnnouncementController::class, 'store'])->name('admin.announcement.store');
     Route::put('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'update'])->name('admin.announcement.update');
     Route::delete('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'destroy'])->name('admin.announcement.destroy');
+
+    // FacultyLoadPage Routes
+    Route::get('/admin/faulty/load', [FacultyLoadController::class, 'index'])->name('admin.faculty.load');
+
+    // StudentGrade routes
+    Route::get('/admin/student/grade', [StudentGradeController::class, 'index'])->name('admin.student.grade');
+    Route::post('/admin/add/student/grade', [StudentGradeController::class, 'store']);
+    Route::put('/grade/{id}/update', [StudentGradeController::class, 'update'])->name('grade.update');
+    Route::delete('/grade/{id}/delete', [StudentGradeController::class, 'destroy'])->name('grade.delete');
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');

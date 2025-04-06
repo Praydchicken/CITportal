@@ -30,4 +30,10 @@ class Section extends Model
     {
         return $this->belongsToMany(AdminAnnouncement::class, 'announcement_section');
     }
+
+    public function studentGrades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class);
+    }
+
 }

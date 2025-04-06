@@ -41,10 +41,21 @@ const selectedSubject = ref(null);
 const loading = ref(false);
 const searchQuery = ref('');
 
+// Add filter state variables
+const selectedYearLevelFilter = ref('');
+const selectedSemesterFilter = ref('');
+
+// Function to clear filters
+const clearFilters = () => {
+  selectedYearLevelFilter.value = '';
+  selectedSemesterFilter.value = '';
+};
+
 // Watch for props.subjects changes
 watch(() => props.subjects, (newSubjects) => {
   if (newSubjects) {
     subjects.value = newSubjects;
+    console.log('Subjects data:', newSubjects);
   }
 });
 
@@ -210,6 +221,8 @@ const deleteSubject = (id) => {
 };
 
 const tableHeaders = [
+  { key: 'year_level.year_level', label: 'Year Level' },
+  { key: 'semester.semester_name', label: 'Semester' },
   { key: 'course_code', label: 'Course Code' },
   { key: 'subject_name', label: 'Subject Name' },
   { key: 'description', label: 'Description' },
@@ -233,21 +246,40 @@ const actionButtons = [
 
 // Computed property for filtered subjects
 const filteredSubjects = computed(() => {
-  if (!searchQuery.value) return subjects.value;
-  
-  const query = searchQuery.value.toLowerCase();
-  return subjects.value.filter(subject => {
-    return (
-      (subject.course_code && subject.course_code.toLowerCase().includes(query)) ||
-      (subject.subject_name && subject.subject_name.toLowerCase().includes(query)) ||
-      (subject.description && subject.description.toLowerCase().includes(query)) ||
-      (subject.lecture_units && subject.lecture_units.toString().includes(query)) ||
-      (subject.lab_units && subject.lab_units.toString().includes(query)) ||
-      (subject.total_units && subject.total_units.toString().includes(query)) ||
-      (subject.yearLevel?.year_level && subject.yearLevel.year_level.toLowerCase().includes(query)) ||
-      (subject.semester?.semester_name && subject.semester.semester_name.toLowerCase().includes(query))
+  let filtered = subjects.value;
+
+  // Apply year level filter
+  if (selectedYearLevelFilter.value) {
+    filtered = filtered.filter(subject => 
+      subject.year_level_id === selectedYearLevelFilter.value
     );
-  });
+  }
+
+  // Apply semester filter
+  if (selectedSemesterFilter.value) {
+    filtered = filtered.filter(subject => 
+      subject.semester_id === selectedSemesterFilter.value
+    );
+  }
+
+  // Apply search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(subject => {
+      return (
+        (subject.course_code && subject.course_code.toLowerCase().includes(query)) ||
+        (subject.subject_name && subject.subject_name.toLowerCase().includes(query)) ||
+        (subject.description && subject.description.toLowerCase().includes(query)) ||
+        (subject.lecture_units && subject.lecture_units.toString().includes(query)) ||
+        (subject.lab_units && subject.lab_units.toString().includes(query)) ||
+        (subject.total_units && subject.total_units.toString().includes(query)) ||
+        (subject.year_level?.year_level && subject.year_level.year_level.toLowerCase().includes(query)) ||
+        (subject.semester?.semester_name && subject.semester.semester_name.toLowerCase().includes(query))
+      );
+    });
+  }
+
+  return filtered;
 });
 </script>
 
@@ -259,19 +291,65 @@ const filteredSubjects = computed(() => {
     </Teleport>
 
     <Overlay :show="isModalOpen" @click="closeModal" />
-    <div class="flex justify-between items-center">
-      <form @submit.prevent>
-        <input 
-          v-model="searchQuery"
-          type="text" 
-          placeholder="Search for subjects..." 
-          class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]"
+    
+    <!-- Search and Filter Section -->
+    <div class="mb-6">
+      <!-- Filters -->
+      <div class="flex gap-4 mb-4">
+        <!-- Year Level Filter -->
+        <select
+          v-model="selectedYearLevelFilter"
+          class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
         >
-      </form>
-      <button @click="openModal(null)" 
-        class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
-        Add New Subject
-      </button>
+          <option value="">All Year Levels</option>
+          <option
+            v-for="year in yearLevels"
+            :key="year.id"
+            :value="year.id"
+          >
+            {{ year.year_level }}
+          </option>
+        </select>
+
+        <!-- Semester Filter -->
+        <select
+          v-model="selectedSemesterFilter"
+          class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
+        >
+          <option value="">All Semesters</option>
+          <option
+            v-for="semester in semesters"
+            :key="semester.id"
+            :value="semester.id"
+          >
+            {{ semester.semester_name }}
+          </option>
+        </select>
+
+        <!-- Clear Filters Button -->
+        <button
+          @click="clearFilters"
+          class="px-4 py-2 bg-[#1a3047] text-white rounded-md hover:bg-[#2a4057] transition-colors duration-200"
+        >
+          Clear Filters
+        </button>
+      </div>
+
+      <!-- Search and Add Button Row -->
+      <div class="flex justify-between items-center">
+        <form @submit.prevent>
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search for subjects..." 
+            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]"
+          >
+        </form>
+        <button @click="openModal(null)" 
+          class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+          Add New Subject
+        </button>
+      </div>
     </div>
 
     <!-- Reusable Table Component -->

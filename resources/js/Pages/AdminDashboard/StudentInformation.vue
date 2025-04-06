@@ -27,7 +27,15 @@ const props = defineProps({
   students: Array,
   sections: Array,
   yearLevels: Array,
-  studentStatuses: Array
+  studentStatuses: Array,
+  activeSchoolYear: {
+    type: Object,
+    required: true
+  },
+  schoolYears: {
+    type: Array,
+    required: true
+  }
 });
 
 const sections = ref([
@@ -42,6 +50,8 @@ const isEditMode = ref(false);
 const selectedStudent = ref(null);
 const loading = ref(false);
 const searchQuery = ref('');
+const selectedSchoolYear = ref('');
+const selectedSection = ref('');
 
 // Watch for props.students changes and maintain the order
 watch(() => props.students, (newStudents) => {
@@ -62,8 +72,8 @@ const openModal = (student) => {
     form.first_name = student.first_name;
     form.middle_name = student.middle_name;
     form.last_name = student.last_name;
-    form.section = student.section?.id || "";
-    form.year_level = student.year_level?.id || "";
+    form.section_id = student.section?.id || "";
+    form.year_level_id = student.year_level?.id || "";
     form.phone_number = student.phone_number;
     form.gender = student.gender;
     form.address = student.address;
@@ -94,8 +104,8 @@ const form = useForm({
   first_name: null,
   middle_name: null,
   last_name: null,
-  section: "",
-  year_level: "",
+  section_id: "",
+  year_level_id: "",
   phone_number: null,
   gender: "",
   address: null,
@@ -134,11 +144,11 @@ const submitForm = () => {
     // Update existing student
     form.put(`/student/${selectedStudent.value.id}/update`, {
       preserveScroll: true,
-      onSuccess: (response) => {
+      onSuccess: (page) => {
         // Find and update the edited student
         const editedStudentIndex = students.value.findIndex(s => s.id === selectedStudent.value.id);
         if (editedStudentIndex !== -1) {
-          const updatedStudent = {
+          const updatedStudent = page.props.student || {
             ...students.value[editedStudentIndex],
             ...form._data
           };
@@ -162,22 +172,29 @@ const submitForm = () => {
     // Add new student
     form.post('/student/addInfo', {
       preserveScroll: true,
-      onSuccess: (response) => {
-        // Show notification first
+      onSuccess: (page) => {
+        // Show success notification
         showNotification('Student added successfully');
         
-        // Then update the UI
-        if (response?.student) {
-          students.value.unshift(response.student);
+        // Add the new student to the beginning of the list
+        if (page?.props?.student) {
+          // Remove any existing entry with the same ID if it exists
+          const existingIndex = students.value.findIndex(s => s.id === page.props.student.id);
+          if (existingIndex !== -1) {
+            students.value.splice(existingIndex, 1);
+          }
+          // Add the new student at the beginning
+          students.value.unshift(page.props.student);
         }
         
-        // Finally close the modal and reset form
+        // Close modal and reset form
         form.reset();
         closeModal();
       },
       onError: (errors) => {
         console.log("Validation Errors:", errors);
-        showNotification('Failed to add student', 'error');
+        const errorMessage = errors.message || Object.values(errors)[0] || 'Failed to add student';
+        showNotification(errorMessage, 'error');
       },
       onFinish: () => {
         loading.value = false;
@@ -247,44 +264,157 @@ const processNestedValue = (item, key) => {
 
 // Computed property for filtered students
 const filteredStudents = computed(() => {
-  if (!searchQuery.value) return students.value;
+  let filtered = students.value;
   
-  const query = searchQuery.value.toLowerCase();
-  return students.value.filter(student => {
-    return (
-      (student.student_number && student.student_number.toLowerCase().includes(query)) ||
-      (student.first_name && student.first_name.toLowerCase().includes(query)) ||
-      (student.middle_name && student.middle_name.toLowerCase().includes(query)) ||
-      (student.last_name && student.last_name.toLowerCase().includes(query)) ||
-      (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
-      (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
-      (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
-      (student.status?.status_name && student.status.status_name.toLowerCase().includes(query))
+  // Filter by school year if selected
+  if (selectedSchoolYear.value) {
+    filtered = filtered.filter(student => 
+      student.school_year?.id === selectedSchoolYear.value
     );
-  });
+  }
+
+  // Filter by section if selected
+  if (selectedSection.value) {
+    filtered = filtered.filter(student => 
+      student.section?.section === selectedSection.value
+    );
+  }
+  
+  // Then apply search query filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(student => {
+      return (
+        (student.student_number && student.student_number.toLowerCase().includes(query)) ||
+        (student.first_name && student.first_name.toLowerCase().includes(query)) ||
+        (student.middle_name && student.middle_name.toLowerCase().includes(query)) ||
+        (student.last_name && student.last_name.toLowerCase().includes(query)) ||
+        (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
+        (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
+        (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
+        (student.status?.status_name && student.status.status_name.toLowerCase().includes(query))
+      );
+    });
+  }
+  
+  return filtered;
 });
 
 </script>
 
 <template>
   <div class="relative">
-    <!-- Notification using teleport to ensure it's always on top -->
+    <!-- Notification component -->
     <Teleport to="body">
-      <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
+      <Notification 
+        :show="notification.show" 
+        :message="notification.message" 
+        :type="notification.type" 
+      />
     </Teleport>
 
+    <!-- Active School Year Banner -->
+    <div v-if="activeSchoolYear" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium">
+            Active School Year: <span class="font-bold">{{ activeSchoolYear.school_year }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning when no active school year -->
+    <div v-else class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-sm">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium">
+            No active school year set. Please set an active school year before adding students.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <Overlay :show="isModalOPen" @click="closeModal" />
-    <div class="flex justify-between items-center">
-      <form @submit.prevent>
-        <input 
-          v-model="searchQuery"
-          type="text" 
-          placeholder="Search for students..." 
-          class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]"
-        >
-      </form>
+    
+    <!-- Search and Filter Section -->
+    <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center gap-6">
+        <!-- Search Input -->
+        <form @submit.prevent>
+          <input 
+            v-model="searchQuery"
+            type="text" 
+            placeholder="Search for students..." 
+            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[400px]"
+          >
+        </form>
+        
+        <!-- School Year Filter -->
+        <div class="w-64 relative">
+          <!-- Main dropdown -->
+          <select 
+            v-model="selectedSchoolYear"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
+          >
+            <option value="" class="hidden">All School Years</option>
+            <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+              {{ year.school_year }}
+            </option>
+          </select>
+          
+          <!-- Quick action button - only show when a school year is selected -->
+          <div 
+            v-if="selectedSchoolYear"
+            @click="selectedSchoolYear = ''"
+            class="w-full bg-[#0d6efd] text-white p-2 text-[0.875rem] leading-[1.25rem] rounded-b-[0.5rem] text-center cursor-pointer hover:bg-[#0b5ed7] transition-colors"
+          >
+            All School Years
+          </div>
+
+          <!-- Custom dropdown arrow -->
+          <div class="absolute right-3 top-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Section Filter -->
+        <div class="w-48 relative">
+          <select 
+            v-model="selectedSection"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
+          >
+            <option value="">All Sections</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+
+          <!-- Custom dropdown arrow -->
+          <div class="absolute right-3 top-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add New Students Button -->
       <button @click="openModal(null)" 
-        class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+        class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center ml-4">
         Add New Students
       </button>
     </div>
@@ -362,33 +492,33 @@ const filteredStudents = computed(() => {
 
         <div>
           <select 
-            v-model="form.section" 
+            v-model="form.section_id" 
             class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.section }"
+            :class="{ 'border-red-500': form.errors.section_id }"
           >
             <option value="" disabled selected>Select Section</option>
             <option v-for="section in sections" :key="section.id" :value="section.id">
               {{ section.section }}
             </option>
           </select>
-          <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">
-            {{ form.errors.section }}
+          <p v-if="form.errors.section_id" class="text-red-500 text-sm mt-1">
+            {{ form.errors.section_id }}
           </p>
         </div>
 
         <div>
           <select 
-            v-model="form.year_level" 
+            v-model="form.year_level_id" 
             class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.year_level }"
+            :class="{ 'border-red-500': form.errors.year_level_id }"
           >
             <option value="" disabled selected>Select Year Level</option>
             <option v-for="year in yearLevels" :key="year.id" :value="year.id">
               {{ year.year_level }}
             </option>
           </select>
-          <p v-if="form.errors.year_level" class="text-red-500 text-sm mt-1">
-            {{ form.errors.year_level }}
+          <p v-if="form.errors.year_level_id" class="text-red-500 text-sm mt-1">
+            {{ form.errors.year_level_id }}
           </p>
         </div>
 

@@ -77,8 +77,8 @@ class AdminAnnouncementController extends Controller
             'title_announcement' => 'required|string|max:255',
             'description_announcement' => 'required|string',
             'deadline_announcement' => 'required|date',
-            'year_level_id' => 'required|exists:year_levels,id',
-            'section_id' => 'required|string'
+            'year_level_id' => 'required',
+            'section_id' => 'required'
         ]);
 
         try {
@@ -92,39 +92,71 @@ class AdminAnnouncementController extends Controller
                 'published_at' => now()
             ]);
 
-            // Get the year level
-            $yearLevel = YearLevel::findOrFail($request->year_level_id);
+            if ($request->year_level_id === 'all') {
+                // Get all year levels
+                $yearLevels = YearLevel::all();
+                
+                // Insert all year levels
+                foreach ($yearLevels as $yearLevel) {
+                    DB::table('announcement_year_levels')->insert([
+                        'admin_announcements_id' => $announcement->id,
+                        'year_level_id' => $yearLevel->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
 
-            // Get the section(s) for the selected year level
-            $sections = Section::where('year_level_id', $yearLevel->id)
-                             ->where('section', $request->section_id)
-                             ->get();
+                    if ($request->section_id === 'all') {
+                        // Get all sections for this year level
+                        $sections = Section::where('year_level_id', $yearLevel->id)->get();
+                        foreach ($sections as $section) {
+                            DB::table('announcement_sections')->insert([
+                                'admin_announcements_id' => $announcement->id,
+                                'section_id' => $section->id,
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                // Get the specific year level
+                $yearLevel = YearLevel::findOrFail($request->year_level_id);
 
-            if ($sections->isEmpty()) {
-                DB::rollBack();
-                return redirect()->back()->with('error', 'Selected section not found for this year level');
-            }
-
-            // Insert into announcement_year_levels table
-            DB::table('announcement_year_levels')->insert([
-                'admin_announcements_id' => $announcement->id,
-                'year_level_id' => $yearLevel->id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
-
-            // Insert into announcement_sections table
-            foreach ($sections as $section) {
-                DB::table('announcement_sections')->insert([
+                // Insert into announcement_year_levels table
+                DB::table('announcement_year_levels')->insert([
                     'admin_announcements_id' => $announcement->id,
-                    'section_id' => $section->id,
+                    'year_level_id' => $yearLevel->id,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
+
+                if ($request->section_id === 'all') {
+                    // Get all sections for this year level
+                    $sections = Section::where('year_level_id', $yearLevel->id)->get();
+                } else {
+                    // Get specific section(s) for the selected year level
+                    $sections = Section::where('year_level_id', $yearLevel->id)
+                                     ->where('section', $request->section_id)
+                                     ->get();
+                }
+
+                if ($sections->isEmpty()) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Selected section not found for this year level');
+                }
+
+                // Insert into announcement_sections table
+                foreach ($sections as $section) {
+                    DB::table('announcement_sections')->insert([
+                        'admin_announcements_id' => $announcement->id,
+                        'section_id' => $section->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
             }
 
             DB::commit();
-
             return redirect()->back()->with('success', 'Announcement created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -158,8 +190,8 @@ class AdminAnnouncementController extends Controller
             'title_announcement' => 'required|string|max:255',
             'description_announcement' => 'required|string',
             'deadline_announcement' => 'required|date',
-            'year_level_id' => 'required|exists:year_levels,id',
-            'section_id' => 'required|string'
+            'year_level_id' => 'required',
+            'section_id' => 'required'
         ]);
 
         try {
@@ -172,39 +204,72 @@ class AdminAnnouncementController extends Controller
                 'deadline_announcement' => $request->deadline_announcement
             ]);
 
-            // Get the year level
-            $yearLevel = YearLevel::findOrFail($request->year_level_id);
-
-            // Get the section(s) for the selected year level
-            $sections = Section::where('year_level_id', $yearLevel->id)
-                             ->where('section', $request->section_id)
-                             ->get();
-
-            if ($sections->isEmpty()) {
-                DB::rollBack();
-                return redirect()->back()->with('error', 'Selected section not found for this year level');
-            }
-
             // Delete existing relationships
             DB::table('announcement_year_levels')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
             DB::table('announcement_sections')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
 
-            // Insert into announcement_year_levels table
-            DB::table('announcement_year_levels')->insert([
-                'admin_announcements_id' => $adminAnnouncement->id,
-                'year_level_id' => $yearLevel->id,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            if ($request->year_level_id === 'all') {
+                // Get all year levels
+                $yearLevels = YearLevel::all();
+                
+                // Insert all year levels
+                foreach ($yearLevels as $yearLevel) {
+                    DB::table('announcement_year_levels')->insert([
+                        'admin_announcements_id' => $adminAnnouncement->id,
+                        'year_level_id' => $yearLevel->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
 
-            // Insert into announcement_sections table
-            foreach ($sections as $section) {
-                DB::table('announcement_sections')->insert([
+                    if ($request->section_id === 'all') {
+                        // Get all sections for this year level
+                        $sections = Section::where('year_level_id', $yearLevel->id)->get();
+                        foreach ($sections as $section) {
+                            DB::table('announcement_sections')->insert([
+                                'admin_announcements_id' => $adminAnnouncement->id,
+                                'section_id' => $section->id,
+                                'created_at' => now(),
+                                'updated_at' => now()
+                            ]);
+                        }
+                    }
+                }
+            } else {
+                // Get the specific year level
+                $yearLevel = YearLevel::findOrFail($request->year_level_id);
+
+                // Insert into announcement_year_levels table
+                DB::table('announcement_year_levels')->insert([
                     'admin_announcements_id' => $adminAnnouncement->id,
-                    'section_id' => $section->id,
+                    'year_level_id' => $yearLevel->id,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
+
+                if ($request->section_id === 'all') {
+                    // Get all sections for this year level
+                    $sections = Section::where('year_level_id', $yearLevel->id)->get();
+                } else {
+                    // Get specific section(s) for the selected year level
+                    $sections = Section::where('year_level_id', $yearLevel->id)
+                                     ->where('section', $request->section_id)
+                                     ->get();
+                }
+
+                if ($sections->isEmpty()) {
+                    DB::rollBack();
+                    return redirect()->back()->with('error', 'Selected section not found for this year level');
+                }
+
+                // Insert into announcement_sections table
+                foreach ($sections as $section) {
+                    DB::table('announcement_sections')->insert([
+                        'admin_announcements_id' => $adminAnnouncement->id,
+                        'section_id' => $section->id,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ]);
+                }
             }
 
             DB::commit();
