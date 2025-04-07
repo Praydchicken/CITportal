@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function () {
 
     // FacultyLoadPage Routes
     Route::get('/admin/faulty/load', [FacultyLoadController::class, 'index'])->name('admin.faculty.load');
+    Route::post('/admin/faculty/load', [FacultyLoadController::class, 'store']);
+    Route::put('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'update']);
+    Route::delete('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'destroy']);
 
     // StudentGrade routes
     Route::get('/admin/student/grade', [StudentGradeController::class, 'index'])->name('admin.student.grade');
@@ -68,8 +71,14 @@ Route::middleware('auth')->group(function () {
     Route::put('/grade/{id}/update', [StudentGradeController::class, 'update'])->name('grade.update');
     Route::delete('/grade/{id}/delete', [StudentGradeController::class, 'destroy'])->name('grade.delete');
 
+    // Faculty/Admin management routes
+    Route::post('/admin/add', [AdminController::class, 'store'])->name('admin.store');
+    Route::put('/admin/{admin}/update', [AdminController::class, 'update'])->name('admin.update');
+    Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('admin.destroy');
+
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
 });
+
 
    

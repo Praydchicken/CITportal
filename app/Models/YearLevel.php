@@ -35,4 +35,9 @@ class YearLevel extends Model
         return $this->hasMany(StudentGrade::class);
     }
 
+    public function facultyLoads(): HasMany
+    {
+        return $this->hasMany(FacultyLoad::class);
+    }
+
 }
