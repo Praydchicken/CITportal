@@ -16,8 +16,8 @@ class ClassRoom extends Model
         'status',
     ];
 
-    public function facultyLoads(): HasMany
-    {
-        return $this->hasMany(FacultyLoad::class);
-    }
+    // public function facultyLoads(): HasMany
+    // {
+    //     return $this->hasMany(FacultyLoad::class);
+    // }
 }

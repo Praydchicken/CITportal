@@ -19,26 +19,24 @@ class Admin extends Model
         'middle_name',
         'last_name',
         'phone_number',
-        'gender',
-        'address',
     ];
 
-    protected $with = ['facultyLoads'];
+    // protected $with = ['facultyLoads'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function facultyLoads(): HasMany
-    {
-        return $this->hasMany(FacultyLoad::class)->with([
-            'curriculum',
-            'section',
-            'yearLevel',
-            'schedule',
-            'room',
-            'semester'
-        ]);
-    }
+    // public function facultyLoads(): HasMany
+    // {
+    //     return $this->hasMany(FacultyLoad::class)->with([
+    //         'curriculum',
+    //         'section',
+    //         'yearLevel',
+    //         'schedule',
+    //         'room',
+    //         'semester'
+    //     ]);
+    // }
 }

@@ -16,6 +16,11 @@ class SchoolYear extends Model
         'school_year_status'
     ];
 
+    public function sections(): HasMany
+    {
+        return $this->hasMany(Section::class);
+    }
+
     public function students(): HasMany
     {
         return $this->hasMany(Student::class);
@@ -25,4 +30,10 @@ class SchoolYear extends Model
     {
         return $this->hasMany(StudentGrade::class);
     }
+
+    public function teachers(): HasMany
+    {
+        return $this->hasMany(Teacher::class);
+    }
+
 }

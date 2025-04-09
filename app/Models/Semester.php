@@ -23,4 +23,9 @@ class Semester extends Model
     {
         return $this->hasMany(StudentGrade::class);
     }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
+    }
 }

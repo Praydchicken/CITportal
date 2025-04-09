@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\ClassRoom;
 use App\Http\Requests\StoreClassRoomRequest;
 use App\Http\Requests\UpdateClassRoomRequest;
+use Inertia\Inertia;
+
+use function Termwind\render;
 
 class ClassRoomController extends Controller
 {
@@ -13,7 +16,7 @@ class ClassRoomController extends Controller
      */
     public function index()
     {
-        //
+        return Inertia::render('AdminDashboard/ClassRoom', ['title' => 'Class Room Management']);
     }
 
     /**

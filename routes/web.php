@@ -8,8 +8,11 @@ use App\Http\Controllers\PostCurriculumConfigController;
 use App\Http\Controllers\PostScheduleManagementController;
 use App\Http\Controllers\PostSectionManagementController;
 use App\Http\Controllers\PostStudentInfoController;
+use App\Http\Controllers\SchoolYearController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
+use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\ClassRoomController;
 use App\Models\AdminAnnouncement;
 use App\Models\FacultyLoad;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +38,23 @@ Route::middleware('auth')->group(function () {
     // For admin routes
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/student/info', [PostStudentInfoController::class,'index'])->name('student.info');
+
+    // For admin school year settings
+    Route::get('/admin/school/year', [SchoolYearController::class,'index'])->name('admin.school.year');
+    Route::post('/admin/school/year', [SchoolYearController::class,'store'])->name('admin.school.year.store');
+    Route::post('/admin/school-year/{id}/set-active', [SchoolYearController::class, 'setActive'])->name('admin.school.year.set-active');
+    Route::delete('/admin/school-year/{id}/delete', [SchoolYearController::class, 'destroy'])->name('admin.school.year.delete');
+
+    // For managing a teacher
+    Route::post('/admin/add/teacher', [TeacherController::class,'store'])->name('admin.add.teacher');
+    Route::put('/admin/teachers/{teacher}', [TeacherController::class, 'update'])->name('admin.update.teacher');
+    Route::delete('/admin/teachers/{teacher}', [TeacherController::class, 'destroy'])->name('admin.destroy.teacher');
+
+    Route::get('/admin/faulty/load', [FacultyLoadController::class, 'index'])->name('admin.faculty.load');
+    Route::post('/admin/faculty/load', [FacultyLoadController::class, 'store']);
+    Route::put('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'update']);
+    Route::delete('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'destroy']);
+
     Route::post('/student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
     Route::delete('/student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
     Route::put('/student/{student}/update', [PostStudentInfoController::class, 'update']);
@@ -78,6 +98,15 @@ Route::middleware('auth')->group(function () {
 
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
+
+    // For admin classroom settings
+    Route::get('/admin/classroom', [ClassRoomController::class,'index'])->name('admin.classroom');
+    Route::post('/admin/classroom', [ClassRoomController::class,'store'])->name('admin.classroom.store');
+    
+    // Teacher management routes
+    Route::post('/teacher/add', [TeacherController::class, 'store'])->name('teacher.store');
+    Route::put('/teacher/{teacher}/update', [TeacherController::class, 'update'])->name('teacher.update');
+    Route::delete('/teacher/{teacher}', [TeacherController::class, 'destroy'])->name('teacher.destroy');
 });
 
 

@@ -17,9 +17,16 @@ class Section extends Model
     protected $fillable = [
         'section',
         'year_level_id',
+        'school_year_id',
         'minimum_number_students',
         'maximum_number_students'
     ];
+
+    public function schoolYear()
+    {
+        return $this->belongsTo(SchoolYear::class);
+    }
+
 
     public function yearLevel(): BelongsTo
     {

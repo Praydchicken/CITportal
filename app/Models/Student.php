@@ -22,6 +22,7 @@ class Student extends Model
         'section_id',
         'year_level_id',
         'student_status_id',
+        'semester_id',
         'school_year_id',
         'student_number',
         'first_name',
@@ -36,6 +37,11 @@ class Student extends Model
      public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function semester(): BelongsTo
+    {
+        return $this->belongsTo(Semester::class);
     }
 
     public function section(): BelongsTo{
@@ -60,6 +66,12 @@ class Student extends Model
     {
         return $this->hasMany(StudentGrade::class);
     }
+
+    public function studentLoads(): HasMany
+    {
+        return $this->hasMany(StudentLoad::class);
+    }
+
 
 
     protected static function booted()

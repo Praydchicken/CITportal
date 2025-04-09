@@ -9,6 +9,7 @@ use App\Models\UserType;
 use App\Models\YearLevel;
 use App\Models\StudentStatus;
 use App\Models\SchoolYear;
+use App\Models\Semester;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +19,20 @@ class PostStudentInfoController extends Controller
 {
     public function index()
     {
-        $students = Student::with(['section', 'yearLevel', 'user', 'status', 'schoolYear'])->latest()->get();
+        $students = Student::with([
+            'section',
+            'yearLevel',
+            'user',
+            'status',
+            'schoolYear',
+            'semester'
+        ])->latest()->get();
         $sections = Section::all();
         $yearLevels = YearLevel::all();
         $studentStatuses = StudentStatus::all();
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
         $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
+        $semesters = Semester::all();
 
         return Inertia::render('AdminDashboard/StudentInformation', [
             'title' => 'Student Information',
@@ -32,7 +41,8 @@ class PostStudentInfoController extends Controller
             'yearLevels' => $yearLevels,
             'studentStatuses' => $studentStatuses,
             'activeSchoolYear' => $activeSchoolYear,
-            'schoolYears' => $schoolYears
+            'schoolYears' => $schoolYears,
+            'semesters' => $semesters
         ]);
     }
 
@@ -57,7 +67,11 @@ class PostStudentInfoController extends Controller
             'year_level_id' => 'required|exists:year_levels,id',
             'student_status_id' => 'required|exists:student_statuses,id',
             'enrollment_date' => 'required|date',
+            'semester_id' => 'required|exists:semesters,id',
         ]);
+
+        // Generate password based on first name and last name
+        $rawPassword = strtolower($request->first_name . $request->last_name); // e.g., juandelacruz
 
         try {
             DB::beginTransaction();
@@ -69,10 +83,11 @@ class PostStudentInfoController extends Controller
                 $studentUserType = UserType::create(['user_type' => 'student']);
             }
 
+            // Create user account with the auto-generated password
             $user = User::create([
                 'name' => $validated['first_name'] . ' ' . $validated['last_name'],
                 'email' => $validated['email'],
-                'password' => Hash::make('password123'),
+                'password' => Hash::make($rawPassword),
                 'user_type_id' => $studentUserType->id
             ]);
 
@@ -82,6 +97,7 @@ class PostStudentInfoController extends Controller
                 'year_level_id' => $validated['year_level_id'],
                 'student_status_id' => $validated['student_status_id'],
                 'school_year_id' => $activeSchoolYear->id,
+                'semester_id' => $validated['semester_id'],
                 'student_number' => $validated['student_number'],
                 'first_name' => $validated['first_name'],
                 'middle_name' => $validated['middle_name'],
@@ -92,9 +108,28 @@ class PostStudentInfoController extends Controller
                 'enrollment_date' => $validated['enrollment_date'],
             ]);
 
+            // Get faculty loads based on student's year level and semester
+            $facultyLoads = DB::table('faculty_loads')
+                ->where('year_level_id', $validated['year_level_id'])
+                ->where('semester_id', $validated['semester_id'])
+                // Optional: Add school_year_id if necessary
+                // ->where('school_year_id', $activeSchoolYear->id)
+                ->get();
+
+            // Create student_loads entries
+            foreach ($facultyLoads as $load) {
+                DB::table('student_loads')->insert([
+                    'student_id' => $student->id,
+                    'faculty_load_id' => $load->id,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
             DB::commit();
 
-            $student->load(['section', 'yearLevel', 'user', 'status', 'schoolYear']);
+            // Load relationships including semester
+            $student->load(['section', 'yearLevel', 'user', 'status', 'schoolYear', 'semester']); 
 
             return back()->with([
                 'success' => 'Student created successfully',
@@ -108,7 +143,7 @@ class PostStudentInfoController extends Controller
     }
 
     public function update(Request $request, Student $student) {
-        $request->validate([
+        $validated = $request->validate([
             'student_number' => 'required|unique:students,student_number,' . $student->id,
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
@@ -121,42 +156,84 @@ class PostStudentInfoController extends Controller
             'enrollment_date' => 'required|date',
             'email' => 'required|email|unique:users,email,' . $student->user_id,
             'student_status_id' => 'required|exists:student_statuses,id',
+            'semester_id' => 'required|exists:semesters,id',
         ]);
 
         try {
             DB::beginTransaction();
 
+            // Update Student model
             $student->update([
-                'student_number' => $request->student_number,
-                'first_name' => $request->first_name,
-                'middle_name' => $request->middle_name,
-                'last_name' => $request->last_name,
-                'section_id' => $request->section_id,
-                'year_level_id' => $request->year_level_id,
-                'phone_number' => $request->phone_number,
-                'gender' => $request->gender,
-                'address' => $request->address,
-                'enrollment_date' => $request->enrollment_date,
-                'student_status_id' => $request->student_status_id,
+                'student_number' => $validated['student_number'],
+                'first_name' => $validated['first_name'],
+                'middle_name' => $validated['middle_name'],
+                'last_name' => $validated['last_name'],
+                'section_id' => $validated['section_id'],
+                'year_level_id' => $validated['year_level_id'],
+                'phone_number' => $validated['phone_number'],
+                'gender' => $validated['gender'],
+                'address' => $validated['address'],
+                'enrollment_date' => $validated['enrollment_date'],
+                'student_status_id' => $validated['student_status_id'],
+                'semester_id' => $validated['semester_id'],
             ]);
 
             // Update User Email if Changed
-            $student->user->update([
-                'email' => $request->email,
-            ]);
+            if ($student->user->email !== $validated['email']) {
+                $student->user->update([
+                    'email' => $validated['email'],
+                ]);
+            }
+
+            // --- Synchronize Student Loads --- 
+
+            // 1. Remove all existing loads for this student
+            DB::table('student_loads')->where('student_id', $student->id)->delete();
+
+            // 2. Check if the student's new status is 'Enrolled'
+            $enrolledStatus = StudentStatus::where('status_name', 'Enrolled')->first();
+            $isEnrolled = $enrolledStatus && $student->student_status_id == $enrolledStatus->id;
+
+            // 3. If enrolled, find and add new relevant loads
+            if ($isEnrolled) {
+                $facultyLoadsToAssign = DB::table('faculty_loads')
+                    ->where('year_level_id', $student->year_level_id)
+                    ->where('semester_id', $student->semester_id)
+                    ->where('section_id', $student->section_id)
+                    // ->where('school_year_id', $student->school_year_id) // Optional: Add if faculty loads are school year specific
+                    ->pluck('id');
+
+                $newStudentLoadData = [];
+                foreach ($facultyLoadsToAssign as $facultyLoadId) {
+                    $newStudentLoadData[] = [
+                        'student_id' => $student->id,
+                        'faculty_load_id' => $facultyLoadId,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+
+                // Bulk insert new loads if any were found
+                if (!empty($newStudentLoadData)) {
+                    DB::table('student_loads')->insert($newStudentLoadData);
+                }
+            }
+            // --- End Synchronize Student Loads --- 
 
             DB::commit();
 
             // Load relationships for the response
-            $student->load(['section', 'yearLevel', 'user', 'status']);
+            $student->load(['section', 'yearLevel', 'user', 'status', 'semester']);
 
             return back()->with([
-                'success' => 'Student updated successfully',
+                'success' => 'Student updated successfully and loads synchronized.',
                 'student' => $student
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
+             \Log::error('Student Update Error: ' . $e->getMessage()); // Log the error
+             \Log::error($e->getTraceAsString());
             return back()->with('error', 'Failed to update student: ' . $e->getMessage());
         }
     }

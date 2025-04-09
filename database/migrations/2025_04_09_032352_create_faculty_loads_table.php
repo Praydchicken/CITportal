@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('faculty_loads', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('admin_id')->constrained()->onDelete('cascade');
+            // $table->foreignId('admin_id')->constrained()->onDelete('cascade');
+            $table->foreignId('teacher_id')->constrained()->onDelete('cascade');
             $table->foreignId('curriculum_id')->constrained()->onDelete('cascade');
             $table->foreignId('section_id')->constrained()->onDelete('cascade');
             $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
             $table->foreignId('class_schedule_id')->constrained()->onDelete('cascade');
-            $table->foreignId('class_room_id')->constrained()->onDelete('cascade');
             $table->foreignId('semester_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });

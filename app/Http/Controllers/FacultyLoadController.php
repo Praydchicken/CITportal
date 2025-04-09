@@ -6,7 +6,7 @@ use App\Models\FacultyLoad;
 use App\Http\Requests\StoreFacultyLoadRequest;
 use App\Http\Requests\UpdateFacultyLoadRequest;
 use Inertia\Inertia;
-use App\Models\Admin;
+use App\Models\Teacher;
 use App\Models\Section;
 use App\Models\YearLevel;
 use App\Models\SchoolYear;
@@ -14,6 +14,8 @@ use Illuminate\Http\Request;
 use App\Models\ClassRoom;
 use App\Models\ClassSchedule;
 use App\Models\Curriculum;
+use App\Models\Student;
+use App\Models\Semester;
 use Illuminate\Support\Facades\DB;
 
 class FacultyLoadController extends Controller
@@ -23,14 +25,14 @@ class FacultyLoadController extends Controller
      */
     public function index()
     {
-        $admins = Admin::with([
+        $teachers = Teacher::with([
             'user',
             'facultyLoads',
             'facultyLoads.curriculum',
             'facultyLoads.section',
             'facultyLoads.yearLevel',
             'facultyLoads.schedule',
-            'facultyLoads.room'
+            'facultyLoads.semester'
         ])->get();
 
         $sections = Section::with('yearLevel')
@@ -46,6 +48,9 @@ class FacultyLoadController extends Controller
                 ];
             });
         $yearLevels = YearLevel::all();
+        
+        // Get school years
+        $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
         
         // Get curricula with their relationships
         $curricula = Curriculum::with(['year_level', 'semester'])
@@ -64,12 +69,16 @@ class FacultyLoadController extends Controller
                 ];
             });
 
+        $semesters = Semester::all();
+
         return Inertia::render('AdminDashboard/FacultyLoad', [
             'title' => 'Faculty Load',
-            'admins' => $admins,
+            'teachers' => $teachers,
             'sections' => $sections,
             'yearLevels' => $yearLevels,
-            'curricula' => $curricula
+            'curricula' => $curricula,
+            'schoolYears' => $schoolYears,
+            'semesters' => $semesters
         ]);
     }
 
@@ -88,16 +97,21 @@ class FacultyLoadController extends Controller
     {
         // Validate the incoming request
         $validated = $request->validate([
-            'faculty_id' => 'required|exists:admins,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'curriculum_id' => 'required|exists:curricula,id',
             'section_id' => 'required|exists:sections,id',
             'year_level_id' => 'required|exists:year_levels,id',
             'day' => 'required|in:Monday,Tuesday,Wednesday,Thursday,Friday',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
-            'class_room_id' => 'required|string',
             'semester_id' => 'required|exists:semesters,id'
         ]);
+
+        // Optional: Get active school year if needed for student filtering
+        // $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
+        // if (!$activeSchoolYear) {
+        //     return back()->withErrors(['message' => 'Cannot create faculty load: No active school year set.']);
+        // }
 
         try {
             DB::beginTransaction();
@@ -109,53 +123,101 @@ class FacultyLoadController extends Controller
                 'end_time' => $validated['end_time']
             ]);
 
-            // Find or create the classroom
-            $classRoom = ClassRoom::firstOrCreate(
-                ['room_name' => $validated['class_room_id']],
-                ['status' => 'Active']
-            );
-
-            // Check for schedule conflicts
-            $existingLoad = FacultyLoad::where(function($query) use ($validated, $classSchedule) {
-                $query->where('admin_id', $validated['faculty_id'])
-                      ->where('class_schedule_id', $classSchedule->id);
-            })->orWhere(function($query) use ($validated, $classSchedule, $classRoom) {
-                $query->where('class_schedule_id', $classSchedule->id)
-                      ->where('class_room_id', $classRoom->id);
-            })->first();
-
-            if ($existingLoad) {
+            // Check for teacher schedule conflicts (same teacher, same time)
+            $teacherConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
+                ->where('faculty_loads.teacher_id', $validated['teacher_id'])
+                ->where('class_schedules.day', $validated['day'])
+                ->where(function($query) use ($validated) {
+                    // Check for overlapping time slots
+                    $query->where(function($q) use ($validated) {
+                        // Start time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // End time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<', $validated['end_time'])
+                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // New schedule completely contains an existing one
+                        $q->where('class_schedules.start_time', '>=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                    });
+                })
+                ->first();
+            
+            if ($teacherConflict) {
                 DB::rollBack();
-                return back()->withErrors(['message' => 'Schedule conflict detected. Please choose a different time or room.']);
+                return back()->withErrors(['message' => 'Schedule conflict: This teacher already has a class during this time slot.']);
+            }
+
+            // Check for section schedule conflicts (same section, same time but different teacher)
+            $sectionConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
+                ->where('faculty_loads.section_id', $validated['section_id'])
+                ->where('class_schedules.day', $validated['day'])
+                ->where(function($query) use ($validated) {
+                    // Check for overlapping time slots
+                    $query->where(function($q) use ($validated) {
+                        // Start time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // End time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<', $validated['end_time'])
+                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // New schedule completely contains an existing one
+                        $q->where('class_schedules.start_time', '>=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                    });
+                })
+                ->first();
+
+            if ($sectionConflict) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Schedule conflict: This section already has a class scheduled during this time slot.']);
             }
 
             // Create the faculty load
             $facultyLoad = FacultyLoad::create([
-                'admin_id' => $validated['faculty_id'],
+                'teacher_id' => $validated['teacher_id'],
                 'curriculum_id' => $validated['curriculum_id'],
                 'section_id' => $validated['section_id'],
                 'year_level_id' => $validated['year_level_id'],
                 'class_schedule_id' => $classSchedule->id,
-                'class_room_id' => $classRoom->id,
                 'semester_id' => $validated['semester_id']
+                // Optional: 'school_year_id' => $activeSchoolYear->id,
             ]);
 
-            // Get the updated admin data with all necessary relationships
-            $admins = Admin::with([
-                'user',
-                'facultyLoads',
-                'facultyLoads.curriculum',
-                'facultyLoads.section',
-                'facultyLoads.yearLevel',
-                'facultyLoads.schedule',
-                'facultyLoads.room'
-            ])->get();
+            // --- Automatically Assign Students to this New Load --- 
+            $studentsToAssign = Student::where('year_level_id', $validated['year_level_id'])
+                                ->where('semester_id', $validated['semester_id'])
+                                ->where('section_id', $validated['section_id']) // Still need section match
+                                // ->where('school_year_id', $activeSchoolYear->id) // Optional: Filter by active school year
+                                ->whereHas('status', function($query) { // Ensure student is Enrolled
+                                    $query->where('status_name', 'Enrolled');
+                                })
+                                ->pluck('id'); // Get only the IDs
+
+            $studentLoadData = [];
+            foreach ($studentsToAssign as $studentId) {
+                $studentLoadData[] = [
+                    'student_id' => $studentId,
+                    'faculty_load_id' => $facultyLoad->id,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            // Bulk insert for efficiency
+            if (!empty($studentLoadData)) {
+                DB::table('student_loads')->insert($studentLoadData);
+            }
+            // --- End Student Assignment --- 
 
             DB::commit();
 
             return redirect()->back()->with([
-                'success' => 'Faculty load created successfully.',
-                'admins' => $admins
+                'success' => 'Faculty load created successfully and assigned to relevant students.'
             ]);
 
         } catch (\Exception $e) {
@@ -193,14 +255,13 @@ class FacultyLoadController extends Controller
     public function update(Request $request, FacultyLoad $facultyLoad)
     {
         $validated = $request->validate([
-            'faculty_id' => 'required|exists:admins,id',
+            'teacher_id' => 'required|exists:teachers,id',
             'curriculum_id' => 'required|exists:curricula,id',
             'section_id' => 'required|exists:sections,id',
             'year_level_id' => 'required|exists:year_levels,id',
             'day' => 'required|string',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
-            'class_room_id' => 'required|string',
             'semester_id' => 'required|exists:semesters,id'
         ]);
 
@@ -217,43 +278,76 @@ class FacultyLoadController extends Controller
                 ]
             );
 
-            // Update or create classroom
-            $classRoom = ClassRoom::firstOrCreate(
-                ['room_name' => $validated['class_room_id']],
-                [
-                    'room_name' => $validated['class_room_id'],
-                    'status' => 'Available' // Set default status for new rooms
-                ]
-            );
+            // Check for teacher schedule conflicts (same teacher, same time, different load)
+            $teacherConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
+                ->where('faculty_loads.teacher_id', $validated['teacher_id'])
+                ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
+                ->where('class_schedules.day', $validated['day'])
+                ->where(function($query) use ($validated) {
+                    // Check for overlapping time slots
+                    $query->where(function($q) use ($validated) {
+                        // Start time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // End time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<', $validated['end_time'])
+                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // New schedule completely contains an existing one
+                        $q->where('class_schedules.start_time', '>=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                    });
+                })
+                ->first();
+            
+            if ($teacherConflict) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Schedule conflict: This teacher already has another class during this time slot.']);
+            }
+
+            // Check for section schedule conflicts (same section, same time, different load)
+            $sectionConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
+                ->where('faculty_loads.section_id', $validated['section_id'])
+                ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
+                ->where('class_schedules.day', $validated['day'])
+                ->where(function($query) use ($validated) {
+                    // Check for overlapping time slots
+                    $query->where(function($q) use ($validated) {
+                        // Start time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // End time is during an existing schedule
+                        $q->where('class_schedules.start_time', '<', $validated['end_time'])
+                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function($q) use ($validated) {
+                        // New schedule completely contains an existing one
+                        $q->where('class_schedules.start_time', '>=', $validated['start_time'])
+                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                    });
+                })
+                ->first();
+
+            if ($sectionConflict) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Schedule conflict: This section already has another class scheduled during this time slot.']);
+            }
 
             // Update faculty load with the correct IDs
             $facultyLoad->update([
-                'admin_id' => $validated['faculty_id'],
+                'teacher_id' => $validated['teacher_id'],
                 'curriculum_id' => $validated['curriculum_id'],
                 'section_id' => $validated['section_id'],
                 'year_level_id' => $validated['year_level_id'],
                 'class_schedule_id' => $classSchedule->id,
-                'class_room_id' => $classRoom->id,
                 'semester_id' => $validated['semester_id']
             ]);
-
-            // Get the updated admin data with all necessary relationships
-            $admins = Admin::with([
-                'user',
-                'facultyLoads',
-                'facultyLoads.curriculum',
-                'facultyLoads.section',
-                'facultyLoads.yearLevel',
-                'facultyLoads.schedule',
-                'facultyLoads.room',
-                'facultyLoads.semester'
-            ])->get();
 
             DB::commit();
 
             return back()->with([
-                'success' => 'Faculty load updated successfully.',
-                'admins' => $admins
+                'success' => 'Faculty load updated successfully.'
             ]);
 
         } catch (\Exception $e) {
@@ -273,9 +367,8 @@ class FacultyLoadController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get the schedule and room IDs before deleting the faculty load
+            // Get the schedule ID before deleting the faculty load
             $scheduleId = $facultyLoad->class_schedule_id;
-            $roomId = $facultyLoad->class_room_id;
 
             // Delete the faculty load
             $facultyLoad->delete();
@@ -285,23 +378,10 @@ class FacultyLoadController extends Controller
                 ClassSchedule::where('id', $scheduleId)->delete();
             }
 
-            // Get the updated admin data with all necessary relationships
-            $admins = Admin::with([
-                'user',
-                'facultyLoads',
-                'facultyLoads.curriculum',
-                'facultyLoads.section',
-                'facultyLoads.yearLevel',
-                'facultyLoads.schedule',
-                'facultyLoads.room',
-                'facultyLoads.semester'
-            ])->get();
-
             DB::commit();
 
             return back()->with([
-                'success' => 'Schedule deleted successfully.',
-                'admins' => $admins
+                'success' => 'Schedule deleted successfully.'
             ]);
 
         } catch (\Exception $e) {

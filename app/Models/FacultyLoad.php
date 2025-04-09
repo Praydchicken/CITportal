@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FacultyLoad extends Model
 {
@@ -12,19 +13,25 @@ class FacultyLoad extends Model
     use HasFactory;
 
     protected $fillable = [
-        'admin_id',
+        // 'admin_id',
+        'teacher_id',
         'curriculum_id',
         'section_id',
         'year_level_id',
         'class_schedule_id',
-        'class_room_id',
         'semester_id'
     ];
 
-    public function admin(): BelongsTo
+    // public function admin(): BelongsTo
+    // {
+    //     return $this->belongsTo(Admin::class); // assuming User model for admin
+    // }
+
+    public function teacher(): BelongsTo
     {
-        return $this->belongsTo(Admin::class); // assuming User model for admin
+        return $this->belongsTo(Teacher::class);
     }
+
 
     public function curriculum(): BelongsTo
     {
@@ -46,13 +53,14 @@ class FacultyLoad extends Model
         return $this->belongsTo(ClassSchedule::class, 'class_schedule_id');
     }
 
-    public function room(): BelongsTo
-    {
-        return $this->belongsTo(ClassRoom::class, 'class_room_id');
-    }
-
     public function semester(): BelongsTo
     {
         return $this->belongsTo(Semester::class);
     }
+
+    public function studentLoads(): HasMany
+    {
+        return $this->hasMany(StudentLoad::class);
+    }
+
 }

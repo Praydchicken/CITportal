@@ -35,15 +35,11 @@ const props = defineProps({
   schoolYears: {
     type: Array,
     required: true
-  }
+  },
+  semesters: Array,
 });
 
-const sections = ref([
-  { id: 1, section: 'A' },
-  { id: 2, section: 'B' },
-  { id: 3, section: 'C' },
-  { id: 4, section: 'D' }
-]);
+const sections = ref(props.sections);
 const yearLevels = ref(props.yearLevels);
 const students = ref(props.students);
 const isEditMode = ref(false);
@@ -52,6 +48,8 @@ const loading = ref(false);
 const searchQuery = ref('');
 const selectedSchoolYear = ref('');
 const selectedSection = ref('');
+const selectedYearLevel = ref('');
+const selectedSemester = ref('');
 
 // Watch for props.students changes and maintain the order
 watch(() => props.students, (newStudents) => {
@@ -61,6 +59,14 @@ watch(() => props.students, (newStudents) => {
 });
 
 const isModalOPen = ref(false);
+
+// --- Computed Property for Enrolled Status ---
+const enrolledStatus = computed(() => {
+  return props.studentStatuses?.find(status => status.status_name?.toLowerCase() === 'enrolled');
+});
+
+const enrolledStatusId = computed(() => enrolledStatus.value?.id);
+// --- End Computed Property ---
 
 const openModal = (student) => {
   if (student) {
@@ -80,10 +86,14 @@ const openModal = (student) => {
     form.enrollment_date = student.enrollment_date;
     form.student_status_id = student.status?.id || "";
     form.email = student.user?.email || "";
-    form.password = ""; // Keep password empty for security
+    form.password = "";
+    form.semester_id = student.semester?.id || ""; // Renamed from semester
   } else {
     isEditMode.value = false; // Adding new student
-    form.reset(); // Clear form
+    form.reset(); // Reset first
+    // THEN set enrolled status ID reliably
+    form.student_status_id = enrolledStatusId.value;
+    form.semester_id = ""; // Renamed from semester
   }
 
   isModalOPen.value = true; // Open the modal
@@ -110,10 +120,10 @@ const form = useForm({
   gender: "",
   address: null,
   enrollment_date: null,
-  student_status_id: "",
+  student_status_id: null, // Initialize as null
   email: null,
-  password: null,
   remember: false,
+  semester_id: "", // Renamed from semester
 })
 
 // Create a reactive object for the notification state
@@ -247,14 +257,14 @@ const tableHeaders = [
 const actionButtons = [
   {
     label: 'Edit',
-    class: 'bg-[#559de6] text-white px-3 py-1 rounded cursor-pointer',
+    class: 'bg-green-500 text-white px-3 py-1 rounded cursor-pointer',
     action: (student) => openModal(student)
   },
   {
     label: 'Delete',
     class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer',
     action: (student) => deleteStudent(student.id)
-  }
+  },
 ];
 
 // Modify the ReusableTable component to handle nested properties
@@ -279,6 +289,20 @@ const filteredStudents = computed(() => {
       student.section?.section === selectedSection.value
     );
   }
+
+  // Filter by year level if selected
+  if (selectedYearLevel.value) {
+    filtered = filtered.filter(student => 
+      student.year_level?.id === selectedYearLevel.value
+    );
+  }
+
+  // Filter by semester if selected
+  if (selectedSemester.value) {
+    filtered = filtered.filter(student => 
+      student.semester?.id == selectedSemester.value
+    );
+  }
   
   // Then apply search query filter
   if (searchQuery.value) {
@@ -292,12 +316,59 @@ const filteredStudents = computed(() => {
         (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
         (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
         (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
-        (student.status?.status_name && student.status.status_name.toLowerCase().includes(query))
+        (student.status?.status_name && student.status.status_name.toLowerCase().includes(query)) ||
+        (student.semester?.semester_name && student.semester.semester_name.toLowerCase().includes(query))
       );
     });
   }
   
   return filtered;
+});
+
+// Update the filteredSections computed property
+const filteredSections = computed(() => {
+  if (!selectedYearLevel.value) {
+    // When no year level is selected, show unique sections
+    const uniqueSections = new Set(sections.value.map(section => section.section));
+    return Array.from(uniqueSections).map(sectionName => ({
+      id: sections.value.find(s => s.section === sectionName).id,
+      section: sectionName
+    }));
+  }
+  
+  // When year level is selected, filter sections by year level
+  const yearLevelSections = sections.value.filter(section => 
+    section.year_level_id === parseInt(selectedYearLevel.value)
+  );
+  
+  // Return unique sections for the selected year level
+  const uniqueSections = new Set(yearLevelSections.map(section => section.section));
+  return Array.from(uniqueSections).map(sectionName => ({
+    id: yearLevelSections.find(s => s.section === sectionName).id,
+    section: sectionName
+  }));
+});
+
+// Add computed property for form sections
+const formFilteredSections = computed(() => {
+  if (!form.year_level_id) {
+    return [];
+  }
+  return sections.value.filter(section => 
+    section.year_level_id === parseInt(form.year_level_id)
+  );
+});
+
+// Add watcher for form year level changes
+watch(() => form.year_level_id, (newValue) => {
+  // Reset section when year level changes
+  form.section_id = '';
+});
+
+// Add watcher for year level filter changes
+watch(selectedYearLevel, (newValue) => {
+  // Reset section when year level changes
+  selectedSection.value = '';
 });
 
 </script>
@@ -347,21 +418,31 @@ const filteredStudents = computed(() => {
 
     <Overlay :show="isModalOPen" @click="closeModal" />
     
-    <!-- Search and Filter Section -->
-    <div class="flex justify-between items-center mb-4">
-      <div class="flex items-center gap-6">
+    <!-- Search and Filter Section - Updated Layout -->
+    <div class="flex flex-col gap-4 mb-4"> 
+      <!-- Top Row: Search and Add Button -->
+      <div class="flex justify-between items-center">
         <!-- Search Input -->
         <form @submit.prevent>
           <input 
             v-model="searchQuery"
             type="text" 
             placeholder="Search for students..." 
-            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[400px]"
+            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[300px]"
           >
         </form>
-        
+
+        <!-- Add New Students Button -->
+        <button @click="openModal(null)" 
+          class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+          Add New Students
+        </button>
+      </div>
+
+      <!-- Bottom Row: Filters -->
+      <div class="flex items-center gap-6 flex-wrap"> 
         <!-- School Year Filter -->
-        <div class="w-64 relative">
+        <div class="w-48 relative">
           <!-- Main dropdown -->
           <select 
             v-model="selectedSchoolYear"
@@ -397,10 +478,9 @@ const filteredStudents = computed(() => {
             class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
           >
             <option value="">All Sections</option>
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
+            <option v-for="section in filteredSections" :key="section.id" :value="section.section">
+              {{ section.section }}
+            </option>
           </select>
 
           <!-- Custom dropdown arrow -->
@@ -410,14 +490,48 @@ const filteredStudents = computed(() => {
             </svg>
           </div>
         </div>
-      </div>
 
-      <!-- Add New Students Button -->
-      <button @click="openModal(null)" 
-        class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center ml-4">
-        Add New Students
-      </button>
-    </div>
+        <!-- Year Level Filter -->
+        <div class="w-48 relative">
+          <select 
+            v-model="selectedYearLevel"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
+          >
+            <option value="">All Year Levels</option>
+            <option v-for="year in yearLevels" :key="year.id" :value="year.id">
+              {{ year.year_level }}
+            </option>
+          </select>
+
+          <!-- Custom dropdown arrow -->
+          <div class="absolute right-3 top-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Semester Filter -->
+        <div class="w-48 relative">
+          <select 
+            v-model="selectedSemester"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
+          >
+            <option value="">All Semesters</option>
+            <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
+              {{ semester.semester_name }}
+            </option>
+          </select>
+
+          <!-- Custom dropdown arrow -->
+          <div class="absolute right-3 top-3 pointer-events-none">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+      </div> 
+    </div> 
 
     <!-- Reusable Table Component -->
     <ReusableTable 
@@ -431,13 +545,17 @@ const filteredStudents = computed(() => {
     <ReusableModal :show="isModalOPen" :title="isEditMode ? 'Edit Student' : 'Add Student'" :loading="loading"
       :submit-button-text="isEditMode ? 'Edit Student' : 'Add Student'" @close="closeModal" @submit="submitForm">
       <!-- Form Grid Container -->
+      <div class="mb-4 bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+        <p>Note: A password will be automatically generated using the student's first and last name. For example, for "John Doe", the password will be "johndoe".</p>
+      </div>
+      
       <div class="grid grid-cols-3 gap-4">
         <!-- 1st Row -->
         <div>
+          <label for="student_number" class="block text-sm font-medium text-gray-700">Student Number</label>
           <input 
             type="text" 
             name="student_number" 
-            placeholder="Enter Student No." 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.student_number }"
             v-model="form.student_number"
@@ -448,10 +566,10 @@ const filteredStudents = computed(() => {
         </div>
 
         <div>
+          <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
           <input 
             type="text" 
             name="first_name" 
-            placeholder="Enter First Name" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.first_name }"
             v-model="form.first_name"
@@ -462,10 +580,10 @@ const filteredStudents = computed(() => {
         </div>
 
         <div>
+          <label for="middle_name" class="block text-sm font-medium text-gray-700">Middle Name</label>
           <input 
             type="text" 
             name="middle_name" 
-            placeholder="Enter Middle Name" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.middle_name }"
             v-model="form.middle_name"
@@ -477,10 +595,10 @@ const filteredStudents = computed(() => {
 
         <!-- 2nd Row -->
         <div>
+          <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
           <input 
             type="text" 
             name="last_name" 
-            placeholder="Enter Last Name" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.last_name }"
             v-model="form.last_name"
@@ -490,24 +608,10 @@ const filteredStudents = computed(() => {
           </p>
         </div>
 
-        <div>
+         <div>
+          <label for="year_level" class="block text-sm font-medium text-gray-700">Year Level</label>
           <select 
-            v-model="form.section_id" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.section_id }"
-          >
-            <option value="" disabled selected>Select Section</option>
-            <option v-for="section in sections" :key="section.id" :value="section.id">
-              {{ section.section }}
-            </option>
-          </select>
-          <p v-if="form.errors.section_id" class="text-red-500 text-sm mt-1">
-            {{ form.errors.section_id }}
-          </p>
-        </div>
-
-        <div>
-          <select 
+            id="year_level"
             v-model="form.year_level_id" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.year_level_id }"
@@ -522,12 +626,30 @@ const filteredStudents = computed(() => {
           </p>
         </div>
 
+        <div>
+          <label for="section" class="block text-sm font-medium text-gray-700">Section</label>
+          <select 
+            id="section"
+            v-model="form.section_id" 
+            class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.section_id }"
+          >
+            <option value="" disabled selected>Select Section</option>
+            <option v-for="section in formFilteredSections" :key="section.id" :value="section.id">
+              {{ section.section }}
+            </option>
+          </select>
+          <p v-if="form.errors.section_id" class="text-red-500 text-sm mt-1">
+            {{ form.errors.section_id }}
+          </p>
+        </div>
+
         <!-- 3rd Row -->
         <div>
+          <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
           <input 
             type="text" 
             name="phone_number" 
-            placeholder="Enter Phone Number" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.phone_number }"
             v-model="form.phone_number"
@@ -538,7 +660,9 @@ const filteredStudents = computed(() => {
         </div>
 
         <div>
+          <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
           <select 
+            id="gender"
             name="gender" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.gender }"
@@ -555,10 +679,10 @@ const filteredStudents = computed(() => {
         </div>
 
         <div>
+          <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
           <input 
             type="text" 
             name="address" 
-            placeholder="Enter Address" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.address }"
             v-model="form.address"
@@ -570,7 +694,7 @@ const filteredStudents = computed(() => {
 
         <!-- 4th Row -->
         <div class="col-span-2">
-          <label for="enrollment_date" class="block text-sm font-medium">Enrollment Date</label>
+          <label for="enrollment_date" class="block text-sm font-medium text-gray-700">Enrollment Date</label>
           <input 
             type="date" 
             name="enrollment_date" 
@@ -583,14 +707,18 @@ const filteredStudents = computed(() => {
           </p>
         </div>
 
-        <div>
+        <!-- Student Status -->
+        <!-- Show full dropdown when editing -->
+        <div v-if="isEditMode">
+          <label for="student_status" class="block text-sm font-medium text-gray-700">Student Status</label>
           <select 
+            id="student_status"
             name="student_status_id" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.student_status_id }"
             v-model="form.student_status_id"
           >
-            <option value="" disabled selected>Select Status</option>
+            <option value="" disabled>Select Status</option> <!-- Keep disabled default for edit -->
             <option 
               v-for="status in studentStatuses" 
               :key="status.id" 
@@ -603,13 +731,26 @@ const filteredStudents = computed(() => {
             {{ form.errors.student_status_id }}
           </p>
         </div>
+        <!-- Show readonly text input when adding -->
+        <div v-else>
+          <label for="student_status_display" class="block text-sm font-medium text-gray-700">Student Status</label>
+          <input 
+            type="text" 
+            id="student_status_display" 
+            :value="enrolledStatus?.status_name || 'Enrolled'" 
+            class="input-field-add-student bg-gray-200 cursor-not-allowed" 
+            readonly 
+          />
+          <!-- Hidden input to actually submit the ID -->
+          <input type="hidden" name="student_status_id" v-model="form.student_status_id"> 
+        </div>
 
         <!-- 5th Row -->
         <div>
+          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
           <input 
             type="text" 
             name="email" 
-            placeholder="Enter Email" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.email }"
             v-model="form.email"
@@ -619,19 +760,26 @@ const filteredStudents = computed(() => {
           </p>
         </div>
 
+        <!-- Semester Selection -->
         <div>
-          <input 
-            type="password" 
-            name="password" 
-            placeholder="Enter Password" 
+          <label for="semester" class="block text-sm font-medium text-gray-700">Semester</label>
+          <select 
+            id="semester"
+            name="semester_id"
             class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.password }"
-            v-model="form.password"
+            :class="{ 'border-red-500': form.errors.semester_id }"
+            v-model="form.semester_id"
           >
-          <p v-if="form.errors.password" class="text-red-500 text-sm mt-1">
-            {{ form.errors.password }}
+            <option value="" disabled selected>Select Semester</option>
+            <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
+              {{ semester.semester_name }}
+            </option>
+          </select>
+          <p v-if="form.errors.semester_id" class="text-red-500 text-sm mt-1">
+            {{ form.errors.semester_id }}
           </p>
         </div>
+
         <div></div> <!-- Empty cell for alignment -->
       </div>
     </ReusableModal>

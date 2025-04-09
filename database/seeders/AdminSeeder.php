@@ -20,8 +20,6 @@ class AdminSeeder extends Seeder
             'middle_name' => 'Corpuz',
             'last_name' => 'Diaz',
             'phone_number' => '555-555-5555',
-            'gender' => 'Male',
-            'address' => '123 Main St',
         ]);
     }
 }
