@@ -21,7 +21,6 @@ watchEffect(() => {
 </script>
 
 <template>
-<<<<<<< HEAD
   <button
     type="submit"
     :class="['loginBtn-custom', 'liquid', 'cursor-pointer', 'w-full', 'p-2', disabled || countdownText > 0 ? 'disabled:opacity-50 disabled:pointer-events-none' : '']"
@@ -31,9 +30,3 @@ watchEffect(() => {
     <span v-else><slot /></span>
   </button>
 </template>
-=======
-	<button type="submit" class="loginBtn-custom liquid cursor-pointer w-full p-2">
-		<slot />
-	</button>
-</template>
->>>>>>> ce7222cd27b7d8024146c08644b6f0910fa49ca0
