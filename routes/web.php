@@ -107,6 +107,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/teacher/add', [TeacherController::class, 'store'])->name('teacher.store');
     Route::put('/teacher/{teacher}/update', [TeacherController::class, 'update'])->name('teacher.update');
     Route::delete('/teacher/{teacher}', [TeacherController::class, 'destroy'])->name('teacher.destroy');
+
+    // New route for showing student details
+    Route::get('/students/{id}/details', [PostStudentInfoController::class, 'show'])->name('students.showDetails');
 });
 
 

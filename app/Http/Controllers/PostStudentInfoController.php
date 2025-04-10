@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class PostStudentInfoController extends Controller
 {
@@ -254,4 +255,37 @@ class PostStudentInfoController extends Controller
             return back()->withErrors(['error' => 'Failed to delete student: ' . $e->getMessage()]);
         }
     }
+
+    /**
+     * Display the specified student resource with all related details.
+     *
+     * @param  int  $id The ID of the student.
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show($id)
+    {
+        try {
+            $student = Student::with([
+                'user',
+                'section.yearLevel',
+                'status',
+                'schoolYear',
+                'studentLoads.facultyLoad.curriculum',
+                'studentLoads.facultyLoad.schedule',
+                'studentLoads.facultyLoad.teacher',
+                'studentLoads.facultyLoad.semester'
+            ])->find($id);
+
+
+            // dd($student);
+
+            return response()->json($student); // or dd($student) for debugging
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['error' => 'Student not found.'], 404);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch student details.'], 500);
+        }
+    }
+
 }

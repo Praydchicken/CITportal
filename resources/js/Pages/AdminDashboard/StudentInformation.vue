@@ -15,6 +15,7 @@ import { ref, watch, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import Swal from 'sweetalert2';
+import axios from 'axios';
 
 library.add(faXmark);
 
@@ -50,6 +51,9 @@ const selectedSchoolYear = ref('');
 const selectedSection = ref('');
 const selectedYearLevel = ref('');
 const selectedSemester = ref('');
+const expandedRow = ref(null);
+const detailedStudentData = ref(null);
+const expansionLoading = ref(false);
 
 // Watch for props.students changes and maintain the order
 watch(() => props.students, (newStudents) => {
@@ -371,6 +375,38 @@ watch(selectedYearLevel, (newValue) => {
   selectedSection.value = '';
 });
 
+// Updated toggleRow function (Console logs removed)
+const toggleRow = async (student) => {
+  const studentId = student.id;
+  if (expandedRow.value === studentId) {
+    expandedRow.value = null;
+    detailedStudentData.value = null;
+  } else {
+    expandedRow.value = studentId;
+    detailedStudentData.value = null;
+    expansionLoading.value = true;
+    try {
+      const response = await axios.get(`/students/${studentId}/details`);
+      detailedStudentData.value = response.data;
+      console.log(detailedStudentData);
+      
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+      showNotification('Failed to load student details.', 'error');
+    } finally {
+      expansionLoading.value = false;
+    }
+  }
+};
+
+// Keep tableData computed property
+const tableData = computed(() => {
+  return filteredStudents.value.map(student => ({
+    ...student,
+    isExpanded: expandedRow.value === student.id
+  }));
+});
+
 </script>
 
 <template>
@@ -534,12 +570,63 @@ watch(selectedYearLevel, (newValue) => {
     </div> 
 
     <!-- Reusable Table Component -->
-    <ReusableTable 
-      :headers="tableHeaders" 
-      :data="filteredStudents" 
-      :actions="true" 
-      :action-buttons="actionButtons" 
-    />
+    <ReusableTable
+      :headers="tableHeaders"
+      :data="tableData"
+      :actions="true"
+      :action-buttons="actionButtons"
+      :row-clickable="true"
+      @row-click="toggleRow"
+    >
+      <template #row-details="{ item }">
+        <!-- Display Loading State -->
+        <div v-if="expansionLoading" class="bg-[#1a3047] text-gray-100 p-6 text-center">
+          Loading details...
+        </div>
+        <!-- Display Fetched Data -->
+        <div v-else-if="detailedStudentData" class="bg-[#1a3047] text-gray-100 p-6">
+          <!-- Student Details Section -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-white mb-4 text-center border-b border-gray-600 pb-2">Student Details</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+              <div>
+                <p><strong class="font-medium text-gray-300">Full Name:</strong> {{ detailedStudentData.first_name }} {{ detailedStudentData.last_name }}</p>
+                <p><strong class="font-medium text-gray-300">Student No:</strong> {{ detailedStudentData.student_number || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Section:</strong> {{ detailedStudentData.section?.section || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Year Level:</strong> {{ detailedStudentData.section?.year_level?.year_level || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Status:</strong> {{ detailedStudentData.status?.status_name || 'N/A' }}</p>
+              </div>
+              <div>
+                <p><strong class="font-medium text-gray-300">Email:</strong> {{ detailedStudentData.user?.email || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Phone:</strong> {{ detailedStudentData.phone_number || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Gender:</strong> {{ detailedStudentData.gender || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Address:</strong> {{ detailedStudentData.address || 'N/A' }}</p>
+                 <!-- Semester from first load -->
+                <p><strong class="font-medium text-gray-300">Semester:</strong> {{ detailedStudentData.student_loads?.[0]?.faculty_load?.semester?.semester_name || 'N/A' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subjects and Schedule Section -->
+          <div>
+            <h3 class="text-lg font-semibold text-white mb-4 text-center border-b border-gray-600 pb-2">Subjects and Schedule</h3>
+            <div v-if="detailedStudentData.student_loads && detailedStudentData.student_loads.length > 0" class="space-y-2 text-sm">
+              <div v-for="load in detailedStudentData.student_loads" :key="load.id" class="p-2 border-b border-gray-700 last:border-b-0">
+                 <!-- Use confirmed structure -->
+                <p><strong class="font-medium text-gray-300">Subject:</strong> {{ load.faculty_load?.curriculum?.subject_name || 'N/A' }} ({{ load.faculty_load?.curriculum?.course_code || 'N/A' }})</p>
+                <p><strong class="font-medium text-gray-300">Schedule:</strong> {{ load.faculty_load?.schedule?.day || 'N/A' }} | {{ load.faculty_load?.schedule?.start_time || 'N/A' }} - {{ load.faculty_load?.schedule?.end_time || 'N/A' }}</p>
+                <p><strong class="font-medium text-gray-300">Teacher:</strong> {{ load.faculty_load?.teacher?.first_name || '' }} {{ load.faculty_load?.teacher?.last_name || 'N/A' }}</p>
+              </div>
+            </div>
+            <p v-else class="text-center text-gray-400 italic">No subjects assigned</p>
+          </div>
+        </div>
+        <!-- Display Error State -->
+        <div v-else class="bg-[#1a3047] text-gray-100 p-6 text-center text-red-400">
+           Failed to load details.
+        </div>
+      </template>
+    </ReusableTable>
 
     <!-- Reusable Modal Component -->
     <ReusableModal :show="isModalOPen" :title="isEditMode ? 'Edit Student' : 'Add Student'" :loading="loading"
