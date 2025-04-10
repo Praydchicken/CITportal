@@ -13,16 +13,17 @@ class StudentSeeder extends Seeder
      */
     public function run(): void
     {
-        Student::create([
-            'user_id' => '1',
-            'first_name' => 'Joshua',
-            'middle_name' => 'Golong',
-            'last_name' => 'Bolasa',
-            'phone_number' => '0912345678',
-            'gender' => 'Male',
-            'address' => '123 DiyanLang St',
-            'enrollment_date' => '2014-06-12',
-            'status' => 'Active',
-        ]);
+        // Student::create([
+        //     'user_id' => '1',
+        //     'student_number' => '042131284',
+        //     'first_name' => 'Joshua',
+        //     'middle_name' => 'Golong',
+        //     'last_name' => 'Bolasa',
+        //     'phone_number' => '0912345678',
+        //     'gender' => 'Male',
+        //     'address' => '123 DiyanLang St',
+        //     'enrollment_date' => '2014-06-12',
+        //     'status' => 'Active',
+        // ]);
     }
 }

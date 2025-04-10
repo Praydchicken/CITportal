@@ -18,8 +18,6 @@ return new class extends Migration
             $table->string('middle_name', 50)->nullable();
             $table->string('last_name', 50);
             $table->string('phone_number');
-            $table->enum('gender', ['Male', 'Female', 'Other']);
-            $table->text('address')->nullable();
             $table->timestamps();
         });
     }

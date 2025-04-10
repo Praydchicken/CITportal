@@ -15,13 +15,11 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         Admin::create([
-            'user_id' => '2',
+            'user_id' => '1',
             'first_name' => 'Ben',
             'middle_name' => 'Corpuz',
             'last_name' => 'Diaz',
             'phone_number' => '555-555-5555',
-            'gender' => 'Male',
-            'address' => '123 Main St',
         ]);
     }
 }

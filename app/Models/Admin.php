@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Admin extends Model
 {
@@ -17,13 +18,25 @@ class Admin extends Model
         'first_name',
         'middle_name',
         'last_name',
-        'phone_numer',
-        'gender',
-        'address',
+        'phone_number',
     ];
+
+    // protected $with = ['facultyLoads'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
+
+    // public function facultyLoads(): HasMany
+    // {
+    //     return $this->hasMany(FacultyLoad::class)->with([
+    //         'curriculum',
+    //         'section',
+    //         'yearLevel',
+    //         'schedule',
+    //         'room',
+    //         'semester'
+    //     ]);
+    // }
 }
