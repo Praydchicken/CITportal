@@ -1,19 +1,9 @@
 <script setup>
-import StudentDashboardLayout from '../../components/studentDashboardLayout/StudentDashboardLayout.vue';
-import { usePage } from '@inertiajs/vue3';
+import TeacherDashboardLayout from '../../components/teacherDashboardLayout/TeacherDashboardLayout.vue';
 
 defineOptions({
-  layout: StudentDashboardLayout
+  layout: TeacherDashboardLayout
 });
-
-const page = usePage();
-const props = defineProps({
-  welcomeMessage: String,
-  announcements: Array,
-  classSchedule: Array
-});
-
-console.log(props);
 
 </script>
 

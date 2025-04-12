@@ -13,6 +13,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\TeacherClassScheduleController;
 use App\Models\AdminAnnouncement;
 use App\Models\FacultyLoad;
 use Illuminate\Support\Facades\Route;
@@ -110,6 +111,11 @@ Route::middleware('auth')->group(function () {
 
     // New route for showing student details
     Route::get('/students/{id}/details', [PostStudentInfoController::class, 'show'])->name('students.showDetails');
+
+    // For teacher dashboard and features
+    Route::get('/teacher/dashboard', [TeacherController::class, 'index'])->name('teacher.dashboard');
+    Route::get('/teacher/class/schedule', [TeacherClassScheduleController::class, 'index'])->name('teacher.class.schedule');
+
 });
 
 

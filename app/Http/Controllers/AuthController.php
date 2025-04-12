@@ -34,6 +34,8 @@ class AuthController extends Controller
         // Redirect based on user type
         if ($user->userType->user_type === 'Admin') {
             return redirect()->route('admin.dashboard');
+        } else if ($user->userType->user_type === 'Teacher') {
+            return redirect()->route('teacher.dashboard');
         }
 
         return redirect()->route('student.dashboard');
@@ -58,9 +60,9 @@ class AuthController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreAuthRequest $request)
+    public function store(Request $request)
     {
-        //
+       
     }
 
     /**
