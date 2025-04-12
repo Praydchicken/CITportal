@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use App\Models\AdminAnnouncement;
+use App\Models\TeacherAnnouncement;
 
 class TeacherController extends Controller
 {
@@ -37,18 +38,18 @@ class TeacherController extends Controller
         }
 
         // Get relevant announcements
-        $announcements = AdminAnnouncement::where(function($query) use ($teacher) {
-            $query->whereDoesntHave('sections')
-                ->whereDoesntHave('yearLevels')
-                ->orWhereHas('sections', function($q) use ($teacher) {
-                    $q->whereIn('sections.id', $teacher->facultyLoads->pluck('section_id'));
-                })
-                ->orWhereHas('yearLevels', function($q) use ($teacher) {
-                    $q->whereIn('year_levels.id', $teacher->facultyLoads->pluck('year_level_id'));
-                });
-        })
-        ->orderBy('created_at', 'desc')
-        ->get();
+        // $announcements = TeacherAnnouncement::where(function($query) use ($teacher) {
+        //     $query->whereDoesntHave('sections')
+        //         ->whereDoesntHave('yearLevels')
+        //         ->orWhereHas('sections', function($q) use ($teacher) {
+        //             $q->whereIn('sections.id', $teacher->facultyLoads->pluck('section_id'));
+        //         })
+        //         ->orWhereHas('yearLevels', function($q) use ($teacher) {
+        //             $q->whereIn('year_levels.id', $teacher->facultyLoads->pluck('year_level_id'));
+        //         });
+        // })
+        // ->orderBy('created_at', 'desc')
+        // ->get();
 
         // Get teacher's class schedule
         $classSchedule = $teacher->facultyLoads->map(function($load) {
@@ -73,7 +74,7 @@ class TeacherController extends Controller
                 ]
             ],
             'welcomeMessage' => "Welcome back, {$teacher->first_name} {$teacher->last_name}!",
-            'announcements' => $announcements,
+            // 'announcements' => $announcements,
             'classSchedule' => $classSchedule,
             'debug' => [] // If you want to enable debugging in the future
         ]);

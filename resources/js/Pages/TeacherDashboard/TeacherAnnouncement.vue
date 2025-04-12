@@ -1,5 +1,5 @@
 <script setup>
-import DashboardLayout from '../../components/AdminDashboardLayout.vue';
+import TeacherDashboardLayout from '../../components/teacherDashboardLayout/TeacherDashboardLayout.vue';
 import { ref, computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Notification from '../../components/Notification.vue';
@@ -8,7 +8,7 @@ import { router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 
 defineOptions({
-  layout: DashboardLayout
+  layout: TeacherDashboardLayout
 });
 
 const props = defineProps({
@@ -158,8 +158,8 @@ const editAnnouncement = (announcement) => {
 
 const submitForm = () => {
   const url = isEditMode.value 
-    ? `/admin/announcement/${selectedAnnouncement.value.id}` 
-    : route('admin.announcement.store');
+    ? `/teacher/announcement/${selectedAnnouncement.value.id}` 
+    : route('teacher.announcement.store');
 
   const method = isEditMode.value ? 'put' : 'post';
 
@@ -196,7 +196,7 @@ const deleteAnnouncement = (id) => {
         confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(`/admin/announcement/${id}`, {
+            router.delete(`/teacher/announcement/${id}`, {
                 preserveScroll: true,
                 onSuccess: () => {
                     showNotification('Announcement deleted successfully');

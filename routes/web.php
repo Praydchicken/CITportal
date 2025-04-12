@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AdminAnnouncementController;
+use App\Http\Controllers\TeacherAnnouncementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FacultyLoadController;
@@ -13,9 +13,11 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\StudentScheduleController;
+use App\Http\Controllers\TeacherAssignedStudentsController;
+use App\Http\Controllers\TeacherAssignedSubjectsController;
 use App\Http\Controllers\TeacherClassScheduleController;
-use App\Models\AdminAnnouncement;
-use App\Models\FacultyLoad;
+use App\Models\Teacher;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -73,13 +75,6 @@ Route::middleware('auth')->group(function () {
     // Curriculum Management Routes
     Route::get('/admin/curriculum/config', [PostCurriculumConfigController::class, 'index'])->name('admin.curriculum.config');
 
-    // Admin Announce Routes
-    Route::get('/admin/announcement', [AdminAnnouncementController::class, 'index'])->name('admin.announcement');
-    Route::post('/admin/add/announcement', [AdminAnnouncementController::class, 'store']);
-    Route::post('/admin/announcement', [AdminAnnouncementController::class, 'store'])->name('admin.announcement.store');
-    Route::put('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'update'])->name('admin.announcement.update');
-    Route::delete('/admin/announcement/{adminAnnouncement}', [AdminAnnouncementController::class, 'destroy'])->name('admin.announcement.destroy');
-
     // FacultyLoadPage Routes
     Route::get('/admin/faulty/load', [FacultyLoadController::class, 'index'])->name('admin.faculty.load');
     Route::post('/admin/faculty/load', [FacultyLoadController::class, 'store']);
@@ -97,9 +92,6 @@ Route::middleware('auth')->group(function () {
     Route::put('/admin/{admin}/update', [AdminController::class, 'update'])->name('admin.update');
     Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('admin.destroy');
 
-    // For student routes
-    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
-
     // For admin classroom settings
     Route::get('/admin/classroom', [ClassRoomController::class,'index'])->name('admin.classroom');
     Route::post('/admin/classroom', [ClassRoomController::class,'store'])->name('admin.classroom.store');
@@ -112,10 +104,21 @@ Route::middleware('auth')->group(function () {
     // New route for showing student details
     Route::get('/students/{id}/details', [PostStudentInfoController::class, 'show'])->name('students.showDetails');
 
+    // For student routes
+    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
+    Route::get('/student/view/schedule/', [StudentScheduleController::class, 'index'])->name('student.view.schedule');
+
     // For teacher dashboard and features
     Route::get('/teacher/dashboard', [TeacherController::class, 'index'])->name('teacher.dashboard');
     Route::get('/teacher/class/schedule', [TeacherClassScheduleController::class, 'index'])->name('teacher.class.schedule');
+    Route::get('/teacher/assigned/subjects', [TeacherAssignedSubjectsController::class, 'index'])->name('teacher.assigned.subjects');
+    Route::get('/teacher/assigned/students', [TeacherAssignedStudentsController::class, 'index'])->name('teacher.assigned.students');
 
+    // Teacher Announce Routes
+    Route::get('/teacher/announcement', [TeacherAnnouncementController::class, 'index'])->name('teacher.announcement');
+    Route::post('/teacher/announcement', [TeacherAnnouncementController::class, 'store'])->name('teacher.announcement.store');
+    Route::put('/teacher/announcement/{teacherAnnouncement}', [TeacherAnnouncementController::class, 'update'])->name('teacher.announcement.update');
+    Route::delete('/teacher/announcement/{teacherAnnouncement}', [TeacherAnnouncementController::class, 'destroy'])->name('teacher.announcement.destroy');
 });
 
 

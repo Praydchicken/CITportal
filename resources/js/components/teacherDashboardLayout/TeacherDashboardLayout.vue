@@ -16,10 +16,10 @@ const page = usePage();
 const adminLinks = [
   { name: "Dashboard", url: route('teacher.dashboard') },
   { name: "Class Schedule", url: route('teacher.class.schedule') },
-  { name: "Assigned Subjects", url: '#' },
-  { name: "Assigned Students", url: '#' },
+  { name: "Assigned Subjects", url: route('teacher.assigned.subjects') },
+  { name: "Assigned Students", url: route('teacher.assigned.students') },
   { name: "Grade Management", url: '#' },
-  { name: "Announcements", url: '#' },
+  { name: "Announcements", url: route('teacher.announcement') },
 ];
 
 const headerContent = computed(() => [

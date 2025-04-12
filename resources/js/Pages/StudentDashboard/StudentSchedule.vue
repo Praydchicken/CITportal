@@ -18,5 +18,5 @@ console.log(props);
 </script>
 
 <template>
-  <h1>Student</h1>
+  <h1>SCHEDULE STUDENT</h1>
 </template>

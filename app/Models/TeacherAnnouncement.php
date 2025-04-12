@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class AdminAnnouncement extends Model
+class TeacherAnnouncement extends Model
 {
     /** @use HasFactory<\Database\Factories\AdminAnnouncementFactory> */
     use HasFactory;
@@ -20,11 +20,11 @@ class AdminAnnouncement extends Model
 
     public function yearLevels(): BelongsToMany
     {
-        return $this->belongsToMany(YearLevel::class, 'announcement_year_levels', 'admin_announcements_id', 'year_level_id');
+        return $this->belongsToMany(YearLevel::class, 'announcement_year_levels', 'teacher_announcements_id', 'year_level_id');
     }
 
     public function sections(): BelongsToMany
     {
-        return $this->belongsToMany(Section::class, 'announcement_sections', 'admin_announcements_id', 'section_id');
+        return $this->belongsToMany(Section::class, 'announcement_sections', 'teacher_announcements_id', 'section_id');
     }
 }

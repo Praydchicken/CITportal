@@ -1,5 +1,5 @@
 <script setup>
-import TeacherDashboardLayout from '@/components/TeacherDashboardLayout.vue';
+import TeacherDashboardLayout from '../../components/teacherDashboardLayout/TeacherDashboardLayout.vue';
 import { computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 

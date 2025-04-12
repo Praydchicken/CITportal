@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('admin_announcements', function (Blueprint $table) {
+        Schema::create('teacher_announcements', function (Blueprint $table) {
             $table->id(); // This creates an unsigned big integer primary key named "id"
             $table->string('title_announcement');
             $table->string('description_announcement');
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('admin_announcements');
+        Schema::dropIfExists('teacher_announcements');
     }
 };
