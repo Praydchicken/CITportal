@@ -1,9 +1,8 @@
 <script setup>
-import StudentDashboardLayout from '../../components/studentDashboardLayout/StudentDashboardLayout.vue';
 import { usePage } from '@inertiajs/vue3';
-
+import { computed } from 'vue';
 defineOptions({
-  layout: StudentDashboardLayout
+
 });
 
 const page = usePage();

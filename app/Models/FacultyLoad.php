@@ -63,4 +63,9 @@ class FacultyLoad extends Model
         return $this->hasMany(StudentLoad::class);
     }
 
+    public function classSchedule()
+    {
+        return $this->belongsTo(ClassSchedule::class, 'class_schedule_id');
+    }
+
 }

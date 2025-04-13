@@ -1,5 +1,5 @@
 <script setup>
-import StudentDashboardLayout from '../../components/studentDashboardLayout/StudentDashboardLayout.vue';
+import StudentDashboardLayout from '../../components/StudentDashboardLayout.vue';
 import { usePage } from '@inertiajs/vue3';
 
 defineOptions({
@@ -57,7 +57,7 @@ console.log(props);
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-if="classSchedule.length === 0">
+            <tr>
               <td colspan="5" class="px-6 py-4 text-center text-gray-500">
                 No class schedule available.
               </td>
