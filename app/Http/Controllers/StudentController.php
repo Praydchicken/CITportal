@@ -44,41 +44,7 @@ class StudentController extends Controller
         })
         ->orderBy('created_at', 'desc')
         ->get();
-
-        // Get student's class schedule using a direct join approach
-        $classSchedule = FacultyLoad::select(
-            'faculty_loads.*',
-            'curricula.subject_name as subject',
-            'admins.first_name as faculty_first_name',
-            'admins.last_name as faculty_last_name',
-            'class_schedules.day',
-            'class_schedules.start_time',
-            'class_schedules.end_time',
-            'class_rooms.room_name',
-            'semesters.semester_name'
-        )
-        ->join('curricula', 'faculty_loads.curriculum_id', '=', 'curricula.id')
-        ->join('admins', 'faculty_loads.admin_id', '=', 'admins.id')
-        ->join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
-        ->join('class_rooms', 'faculty_loads.class_room_id', '=', 'class_rooms.id')
-        ->join('semesters', 'faculty_loads.semester_id', '=', 'semesters.id')
-        ->join('students', 'students.section_id', '=', 'faculty_loads.section_id') // Join students table
-        ->where('students.user_id', $user->id) // Use the authenticated user's ID
-        ->where('faculty_loads.section_id', $student->section_id)
-        ->where('faculty_loads.year_level_id', $student->year_level_id)
-        ->where('students.school_year_id', $student->school_year_id) // Filter by the student's school_year_id
-        ->get()
-        ->map(function($load) {
-            return [
-                'subject' => $load->subject,
-                'faculty' => $load->faculty_first_name . ' ' . $load->faculty_last_name,
-                'day' => $load->day,
-                'start_time' => $load->start_time,
-                'end_time' => $load->end_time,
-                'room' => $load->room_name,
-                'semester' => $load->semester_name,
-            ];
-        });
+        
 
         // Pass data to the frontend
         return Inertia::render('StudentDashboard/StudentDashboard', [
@@ -91,7 +57,6 @@ class StudentController extends Controller
             ],
             'welcomeMessage' => "Welcome back, {$student->first_name} {$student->last_name}!",
             'announcements' => $announcements,
-            'classSchedule' => $classSchedule,
             'debug' => [] // If you want to enable debugging in the future
         ]);
     }
