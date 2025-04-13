@@ -6,12 +6,14 @@ import { faAngleLeft } from '@fortawesome/free-solid-svg-icons'
 library.add(faAngleLeft)
 
 defineProps({
-  links: Array // Accepts an array of links
+  links: Array,
+  componentName: String,
 });
+
 </script>
 
 <template>
-  <nav class="sidenav fixed top-0 border-0 left-0 bg-[#1a3047] w-[20%] h-screen p-2">
+  <nav class="sidenav fixed top-0 border-0 left-0 bg-[#1a3047] w-[20%] h-screen ps-3">
     <div class="flex justify-between items-center">
         <div class="flex items-center gap-x-1">
             <img src="../../../public/assets/img/cit_logo.png" alt="" class="w-[30%] object-cover">
@@ -22,9 +24,17 @@ defineProps({
             <button class="text-xl text-[#1a3047] bg-[#ffff] rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center cursor-pointer"><font-awesome-icon icon="angle-left" /></button>
         </div> -->
     </div>
-    <ul class="mt-4 flex flex-col gap-y-8 p-5">
-      <li v-for="link in links" :key="link.name">
-        <a :href="link.url" class="font-semibold">{{ link.name }}</a>
+    <ul class="mt-4 flex flex-col gap-y-8">
+      <li v-for="link in links" :key="link.name" class="flex flex-col gap-y-2">
+        <Link
+          :href="link.url"
+          class="font-semibold p-5 hover:bg-white hover:text-slate-700 hover:rounded-s-full"
+          :class="{
+            'bg-white text-slate-700 rounded-s-full': $page.component === componentName
+          }"
+        >
+          {{ link.name }}
+        </Link>
       </li>
     </ul>
   </nav>

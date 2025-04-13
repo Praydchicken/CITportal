@@ -3,7 +3,6 @@ import DashboardSideNav from '../components/DashboardSideNav.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 
 import { usePage } from '@inertiajs/vue3';
-import { route } from 'ziggy-js';
 import { computed } from 'vue';
 
 defineProps({
@@ -22,7 +21,7 @@ const adminLinks = [
   { name: "Curriculum Configuration", url: route('admin.curriculum.config') },
   // { name: "Manage Rooms", url: route('admin.class.room') },
   { name: "School Year Settings", url: route('admin.school.year') },
-  // { name: "Admin Announcement", url: route('admin.announcement') },
+  { name: "Accounting API", url: route('admin.accountingSync') },
 ];
 
 const headerContent = computed(() => [
@@ -36,7 +35,7 @@ const headerContent = computed(() => [
 
 <template>
   <div class="dashboard-container relative">
-    <DashboardSideNav :links="adminLinks" />
+    <DashboardSideNav :links="adminLinks" :componentName="page.props.component"/>
     <main class="w-screen h-screen pl-[20%]">
       <div class="h-screen p-10">
         <DashboardHeader :content="headerContent" />
