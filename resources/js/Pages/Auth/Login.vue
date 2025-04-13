@@ -4,6 +4,7 @@ import InputField from '../../Components/InputField.vue';
 import PrimaryBtn from '../../Components/PrimaryBtn.vue';
 import SessionMessage from '../../Components/SessionMessage.vue';
 import TextLink from '../../Components/TextLink.vue';
+import CheckBox from '../../Components/CheckBox.vue';
 
 import { useForm } from '@inertiajs/vue3';
 
@@ -14,11 +15,12 @@ defineProps({
 const form = useForm({
     email: null,
     password: null,
+    remember: false,
 });
 
 const submit = () => {
-    form.post(route("login"), {
-        onSubmit: () => form.reset('password'),
+    form.post(route("login.store"), {
+        onFinish: () => form.reset('password'),
         onError: () => form.reset('password')
     });
 };
@@ -43,7 +45,10 @@ const submit = () => {
                     <InputField label="Password" type="password" v-model="form.password"
                         :error="form.errors.password" />
                     <div class="flex w-full justify-between mt-10">
-                        <p routeName="register">Remember Me</p>
+                        <CheckBox name="remember" v-model="form.remember">
+                            Remember me
+                        </CheckBox>
+
                         <TextLink routeName="password.request" label="Forgot Password?"></TextLink>
                     </div>
                 </div>
@@ -62,7 +67,7 @@ const submit = () => {
             </div>
 
             <div class="w-full px-3 mb-3 justify-center flex">
-                <button type="submit" class="w-full p-3 bg-blue-600 rounded text-white font-bold">
+                <button type="button" class="w-full p-3 bg-blue-600 rounded text-white font-bold">
                     Activate Account
                 </button>
             </div>
