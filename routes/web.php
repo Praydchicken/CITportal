@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminAccountingSyncController;
 use App\Http\Controllers\AdminAnnouncementController;
+use App\Http\Controllers\TeacherAnnouncementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ResetPasswordController;
@@ -15,9 +16,11 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\StudentScheduleController;
+use App\Models\AdminAnnouncement;
+use App\Models\FacultyLoad;
 use App\Http\Controllers\PrintTORController;
 use App\Http\Controllers\StudentScheduleController;
-use App\Http\Controllers\TeacherAnnouncementController;
 use App\Http\Controllers\TeacherAssignedStudentsController;
 use App\Http\Controllers\TeacherAssignedSubjectsController;
 use App\Http\Controllers\TeacherClassScheduleController;
@@ -85,11 +88,9 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::put('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'update']);
     Route::delete('/admin/faculty/load/{facultyLoad}', [FacultyLoadController::class, 'destroy']);
 
-    Route::post('/student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
-    Route::delete('/student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
-    Route::put('/student/{student}/update', [PostStudentInfoController::class, 'update']);
-
-
+    Route::post('student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
+    Route::delete('student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
+    Route::put('student/{student}/update', [PostStudentInfoController::class, 'update']);
     Route::get('/admin/section/management', [PostSectionManagementController::class,'index'])->name('admin.section.management');
     Route::post('/admin/section/add', [PostSectionManagementController::class, 'store'])->name('section.store');
     Route::put('/admin/section/{section}', [PostSectionManagementController::class, 'update'])->name('section.update');
@@ -126,6 +127,11 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::put('/admin/{admin}/update', [AdminController::class, 'update'])->name('admin.update');
     Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('admin.destroy');
 
+    // For student routes
+    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
+    Route::get('/student/schedule', [StudentScheduleController::class, 'index'])->name('student.schedule');
+
+
     // For admin classroom settings
     Route::get('/admin/classroom', [ClassRoomController::class,'index'])->name('admin.classroom');
     Route::post('/admin/classroom', [ClassRoomController::class,'store'])->name('admin.classroom.store');
@@ -138,6 +144,11 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
     Route::post('/admin/sync-financial-records', [AdminAccountingSyncController::class, 'syncFinancialDataFromAPI']);
     // New route for showing student details
+    Route::get('/admin/student-financial-records', function () {
+        return Inertia::render('AdminDashboard/AdminAccountingSync');
+    })->name('admin.accountingSync');
+
+    Route::get('/students/{id}/details', [PostStudentInfoController::class, 'show'])->name('students.showDetails');
     Route::get('/students/{id}/details', [ViewStudentInfoController::class, 'index'])->name('students.showDetails');
 
     // Printing a semi TOR
