@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('student_status_id')->constrained()->onDelete('cascade');
             $table->foreignId('semester_id')->constrained()->onDelete('cascade');
             $table->foreignId('school_year_id')->constrained()->onDelete('cascade');
-            $table->string('student_number', 50)->uniqid();
+            $table->string('student_number', 50)->unique();
             $table->string('first_name', 50);
             $table->string('middle_name', 50)->nullable();
             $table->string('last_name', 50);
