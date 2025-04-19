@@ -8,8 +8,10 @@ use App\Http\Requests\UpdateTeacherAnnouncementRequest;
 use Inertia\Inertia;
 use App\Models\YearLevel;
 use App\Models\Section;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class TeacherAnnouncementController extends Controller
 {
@@ -18,6 +20,8 @@ class TeacherAnnouncementController extends Controller
      */
     public function index()
     {
+        $user = Auth::user();
+        $teacher = Teacher::where('user_id', $user->id)->firstOrFail();
         $yearLevels = YearLevel::all(['id', 'year_level']);
         
         $sections = Section::with('yearLevel')
@@ -56,7 +60,13 @@ class TeacherAnnouncementController extends Controller
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error')
-            ]
+            ],
+             'auth' => [
+                    'user' => [
+                        'name' => "{$teacher->first_name} {$teacher->last_name} | Teacher",
+                        'teacher' => $teacher
+                    ]
+                ],
         ]);
     }
 

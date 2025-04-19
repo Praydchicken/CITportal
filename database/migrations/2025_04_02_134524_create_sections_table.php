@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id(); // This creates the "id" column correctly
             $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
             $table->foreignId('school_year_id')->constrained()->onDelete('cascade');
+            $table->foreignId('semester_id')->constrained()->onDelete('cascade');
             $table->string('section');
             $table->string('minimum_number_students');
             $table->string('maximum_number_students');

@@ -12,6 +12,7 @@ defineOptions({
 });
 
 const props = defineProps({
+  auth: Object,
   yearLevels: {
     type: Array,
     required: true

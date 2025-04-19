@@ -26,8 +26,12 @@ const props = defineProps({
 
 const emit = defineEmits(['row-click']);
 
-const getValue = (item, key) => {
-  return key.split('.').reduce((obj, k) => obj?.[k], item) ?? 'N/A';
+const getNestedValue = (obj, path) => {
+  if (!obj) return '';
+  
+  return path.split('.').reduce((value, key) => {
+    return value && value[key] !== undefined ? value[key] : '';
+  }, obj);
 };
 
 const handleRowClick = (item) => {
@@ -39,41 +43,37 @@ const handleRowClick = (item) => {
 
 <template>
   <div class="w-full">
-    <table class="w-full border-separate border-spacing-y-6 text-center">
+    <table class="min-w-full divide-y divide-gray-200 ">
       <!-- Table Head -->
       <thead>
-        <tr class="bg-[#1a3047] text-[#ffff] rounded-lg">
-          <th v-for="header in headers" :key="header.key" 
-              :class="[
-                'p-4',
-                header.key === headers[0].key ? 'rounded-l-lg' : '',
-                header.key === headers[headers.length - 1].key && !actions ? 'rounded-r-lg' : ''
-              ]">
+        <tr class="bg-[#1a3047] text-[#ffff]">
+          <th v-for="header in headers" :key="header.key" scope="col" 
+              class="px-6 py-3 text-center text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
             {{ header.label }}
           </th>
-          <th v-if="actions" class="p-4 rounded-r-lg">Action</th>
+          <th v-if="actions" class="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Action</th>
         </tr>
       </thead>
 
       <!-- Table Body -->
-      <tbody>
-        <template v-for="(item, index) in data" :key="index">
+      <tbody class="bg-white divide-y divide-gray-200">
+        <template v-for="(item, index) in data" :key="index" :class="{ 'expanded': item && item.isExpanded }">
           <tr
             @click="handleRowClick(item)"
             :class="[
-              'bg-gray-200 shadow-md rounded-lg transition-colors duration-200',
+              'bg-white shadow-md rounded-lg transition-colors duration-200',
               rowClickable ? 'cursor-pointer hover:bg-gray-300' : ''
             ]"
           >
             <td v-for="header in headers" :key="header.key"
                 :class="[
-                  'p-4',
+                  'p-4 text-center',
                   header.key === headers[0].key ? 'rounded-l-lg' : '',
                   header.key === headers[headers.length - 1].key && !actions ? 'rounded-r-lg' : ''
                 ]">
-              {{ getValue(item, header.key) }}
+              {{ getNestedValue(item, header.key) }}
             </td>
-            <td v-if="actions" class="p-4 rounded-r-lg">
+            <td v-if="actions" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               <ul class="flex justify-center items-center gap-x-3">
                 <li v-for="(button, btnIndex) in actionButtons" :key="btnIndex">
                   <button @click.stop="button.action(item)"
@@ -86,7 +86,7 @@ const handleRowClick = (item) => {
           </tr>
           <!-- Transition for the details row -->
           <transition name="expand">
-            <tr v-if="item.isExpanded" class="expand-row">
+            <tr v-if="item && item.isExpanded" class="expand-row">
               <td :colspan="headers.length + (actions ? 1 : 0)" class="p-0">
                  <!-- The slot content now lives inside the transition -->
                 <slot name="row-details" :item="item"></slot>

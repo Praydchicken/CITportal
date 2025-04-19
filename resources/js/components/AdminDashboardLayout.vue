@@ -17,7 +17,7 @@ const adminLinks = [
   { name: "Dashboard", url: route('admin.dashboard') },
   { name: "Manage Students", url: route('student.info') },
   { name: "Faculty Load", url: route('admin.faculty.load') },
-  // { name: "Grade Report", url: route('admin.student.grade') },
+  { name: "Grade Report", url: route('admin.student.grade') },
   { name: "Section Management", url: route('admin.section.management') },
   { name: "Curriculum Configuration", url: route('admin.curriculum.config') },
   // { name: "Manage Rooms", url: route('admin.class.room') },

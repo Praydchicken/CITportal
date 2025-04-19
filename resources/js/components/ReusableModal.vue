@@ -27,11 +27,11 @@ const emit = defineEmits(['close', 'submit']);
 
 <template>
   <transition name="slide">
-    <form @submit.prevent="$emit('submit')" v-if="show"
+    <form @submit.prevent="$emit('submit')" @keydown.enter.prevent="$emit('submit')" v-if="show"
       class="card fixed z-40 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 p-6 w-[600px]">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-xl font-semibold text-center mb-4">{{ title }}</h2>
-        <button @click.prevent="$emit('close')"
+        <button @click.prevent="$emit('close')" :disabled="loading"
           class="text-xl cursor-pointer bg-[#1a3047] text-[#ffff] hover:bg-[#559de6] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
           <font-awesome-icon icon="xmark" />
         </button>

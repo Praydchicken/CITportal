@@ -72,8 +72,6 @@ class Student extends Model
         return $this->hasMany(StudentLoad::class);
     }
 
-
-
     protected static function booted()
     {
         static::deleting(function ($student) {

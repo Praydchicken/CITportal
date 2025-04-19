@@ -16,130 +16,142 @@ const timeSlots = Array.from({ length: 11 }, (_, i) => {
   return `${hour.toString().padStart(2, '0')}:00`;
 });
 
-// Group schedule by day
-const groupedSchedule = computed(() => {
-  const grouped = {};
-  classSchedule.value.forEach(item => {
-    if (!grouped[item.day]) {
-      grouped[item.day] = [];
-    }
-    grouped[item.day].push(item);
-  });
-  
-  // Sort classes by start time within each day
-  Object.keys(grouped).forEach(day => {
-    grouped[day].sort((a, b) => {
-      const timeA = parseInt(a.start_time.split(':')[0]);
-      const timeB = parseInt(b.start_time.split(':')[0]);
-      return timeA - timeB;
-    });
-
-    // Add position information to each item
-    grouped[day] = grouped[day].map((item, index) => ({
-      ...item,
-      heightClass: calculateHeightClass(item.start_time, item.end_time),
-      topClass: grouped[day].length === 1 ? 'top-0' : calculateTopPosition(item.start_time)
-    }));
-  });
-  
-  return grouped;
-});
-
-// Calculate the height class based on duration
-function calculateHeightClass(startTime, endTime) {
-  const start = parseInt(startTime.split(':')[0]);
-  const end = parseInt(endTime.split(':')[0]);
-  const duration = end - start;
-  return `h-[${duration * 6}rem]`; // Increased height per hour
-}
-
-// Calculate top position based on start time
-function calculateTopPosition(startTime) {
-  const [hours, minutes] = startTime.split(':').map(Number);
-  const baseHour = 7; // Schedule starts at 7:00
-  const hourOffset = (hours - baseHour) * 6; // Increased offset per hour
-  const minuteOffset = (minutes / 60) * 6; // Add minute-based offset
-  return `top-[${hourOffset + minuteOffset}rem]`;
-}
-
 // Days of the week in order
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-// Generate random pastel color for subjects
+// Group and position schedule items
+const groupedSchedule = computed(() => {
+  const grouped = {};
+  
+  // Initialize empty arrays for each day
+  daysOfWeek.forEach(day => {
+    grouped[day] = [];
+  });
+
+  // Group by day and calculate positioning
+  classSchedule.value.forEach(item => {
+    const daySchedule = grouped[item.day];
+    
+    // Convert time to minutes since 7:00
+    const startMinutes = convertTimeToMinutes(item.start_time);
+    const endMinutes = convertTimeToMinutes(item.end_time);
+    const duration = endMinutes - startMinutes;
+    
+    // Calculate position and height
+    const position = {
+      ...item,
+      top: `${(startMinutes / 60) * 4}rem`, // 4rem per hour
+      height: `${(duration / 60) * 4}rem`,  // 4rem per hour
+      zIndex: 10
+    };
+    
+    daySchedule.push(position);
+  });
+
+  // Sort each day's schedule by start time
+  daysOfWeek.forEach(day => {
+    grouped[day].sort((a, b) => {
+      return convertTimeToMinutes(a.start_time) - convertTimeToMinutes(b.start_time);
+    });
+    
+    // Detect and resolve overlaps
+    for (let i = 1; i < grouped[day].length; i++) {
+      const prevEnd = convertTimeToMinutes(grouped[day][i-1].end_time);
+      const currStart = convertTimeToMinutes(grouped[day][i].start_time);
+      
+      if (currStart < prevEnd) {
+        // If overlapping, offset the current item
+        grouped[day][i].zIndex = 20;
+        grouped[day][i].left = '50%';
+        grouped[day][i].width = '48%';
+      } else {
+        grouped[day][i].left = '2%';
+        grouped[day][i].width = '96%';
+      }
+    }
+  });
+
+  return grouped;
+});
+
+// Convert HH:MM to minutes since 7:00
+function convertTimeToMinutes(time) {
+  const [hours, minutes] = time.split(':').map(Number);
+  return (hours - 7) * 60 + minutes;
+}
+
+// Generate pastel color for subjects
 function getSubjectColor(subject) {
   const colors = [
-    'bg-pink-100', 'bg-blue-100', 'bg-green-100', 'bg-yellow-100', 
-    'bg-purple-100', 'bg-indigo-100', 'bg-orange-100'
+    'bg-pink-100 border-pink-300', 
+    'bg-blue-100 border-blue-300',
+    'bg-green-100 border-green-300', 
+    'bg-yellow-100 border-yellow-300',
+    'bg-purple-100 border-purple-300',
+    'bg-indigo-100 border-indigo-300',
+    'bg-orange-100 border-orange-300'
   ];
   const index = subject.length % colors.length;
   return colors[index];
 }
-
-// Add debug logging
-console.log('Page Props:', page.props);
-console.log('Class Schedule:', classSchedule.value);
-
-// Computed property for development mode
-const isDevelopment = computed(() => {
-  return process.env.NODE_ENV === 'development';
-});
 </script>
 
 <template>
-  <div class="p-6 h-[calc(90vh-theme(spacing.32))]">
-    <!-- Debug Info (only visible during development) -->
-    <!-- <div v-if="isDevelopment" class="mb-4 p-4 bg-yellow-100 rounded">
-      <p class="font-bold">Debug Info:</p>
-      <p>Has Schedule Data: {{ classSchedule.length > 0 ? 'Yes' : 'No' }}</p>
-      <p>Number of Items: {{ classSchedule.length }}</p>
-    </div> -->
-
-    <div class="schedule-container relative bg-white rounded-lg shadow-lg h-full">
+  <div class="p-6">
+    <div class="schedule-container bg-white rounded-lg shadow-lg">
       <!-- Schedule Grid -->
-      <div class="grid grid-cols-6">
-        <!-- Fixed Headers -->
-        <div class="sticky top-0 z-10 col-span-6 grid grid-cols-6 w-full bg-[#1a3047]">
-          <div v-for="day in daysOfWeek" :key="day" 
-               class="h-14 px-4 border-r last:border-r-0 border-gray-600">
-            <h2 class="text-lg font-semibold text-white h-full flex items-center justify-center whitespace-nowrap">
-              {{ day }}
-            </h2>
-          </div>
+      <div class="grid grid-cols-6 min-w-[1200px]">
+        <!-- Day Headers -->
+        <div 
+          v-for="day in daysOfWeek" 
+          :key="day"
+          class="sticky top-0 z-30 bg-[#1a3047] text-white p-3 border-r border-gray-600 text-center font-semibold"
+        >
+          {{ day }}
         </div>
 
-        <!-- Scrollable Schedule Content -->
-        <div class="col-span-6 grid grid-cols-6">
-          <!-- Schedule Columns -->
-          <template v-for="day in daysOfWeek" :key="day">
-            <div class="relative h-[66rem] border-r last:border-r-0 border-gray-200">
-              <!-- Time slot markers -->
-              <div v-for="time in timeSlots" :key="time" 
-                   class="h-24 border-b border-gray-200">
-              </div>
-
-              <!-- Class blocks -->
-              <div v-for="classItem in (groupedSchedule[day] || [])" 
-                   :key="`${day}-${classItem.start_time}`"
-                   :class="[
-                     'absolute w-[95%] mx-[2.5%] rounded-lg border shadow-sm transition-shadow hover:shadow-md',
-                     getSubjectColor(classItem.subject),
-                     classItem.heightClass,
-                     classItem.topClass
-                   ]">
-                <div class="p-3 h-full flex flex-col">
-                  <h3 class="font-semibold text-gray-800">{{ classItem.subject }}</h3>
-                  <p class="text-sm text-gray-600">{{ classItem.course_code }}</p>
-                  <div class="text-sm text-gray-600 mt-1">
-                    {{ classItem.start_time }} - {{ classItem.end_time }}
-                  </div>
-                  <div class="text-sm text-gray-600 mt-auto">
-                    {{ classItem.section }} - {{ classItem.year_level }}
-                  </div>
-                </div>
-              </div>
+        <!-- Time Slots and Classes -->
+        <template v-for="day in daysOfWeek" :key="`col-${day}`">
+          <div class="relative border-r border-gray-200 min-h-[40rem]">
+            <!-- Time markers -->
+            <div 
+              v-for="time in timeSlots" 
+              :key="`${day}-${time}`"
+              class="h-16 border-b border-gray-200 text-xs text-gray-500 pl-1 pt-1"
+            >
+              {{ time }}
             </div>
-          </template>
-        </div>
+
+            <!-- Class blocks -->
+            <div
+              v-for="(classItem, index) in groupedSchedule[day]"
+              :key="`${day}-${classItem.start_time}-${index}`"
+              :class="[
+                'absolute rounded-lg border shadow-sm p-2 overflow-y-scroll',
+                getSubjectColor(classItem.subject),
+                'hover:shadow-md transition-all'
+              ]"
+              :style="{
+                top: classItem.top,
+                height: classItem.height,
+                left: classItem.left || '2%',
+                width: classItem.width || '96%',
+                'z-index': classItem.zIndex || 10
+              }"
+            >
+              <h3 class="font-semibold text-gray-800 text-sm truncate">
+                {{ classItem.subject }}
+              </h3>
+              <p class="text-xs text-gray-600">{{ classItem.course_code }}</p>
+              <p class="text-xs text-gray-600 mt-1">
+                {{ classItem.start_time }} - {{ classItem.end_time }}
+              </p>
+              <p class="text-xs text-gray-600">
+                {{ classItem.section }} - {{ classItem.year_level }}
+              </p>
+            </div>
+          </div>
+        </template>
       </div>
     </div>
   </div>
@@ -147,18 +159,18 @@ const isDevelopment = computed(() => {
 
 <style scoped>
 .schedule-container {
-  overflow: auto;
-  max-height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
+/* Custom scrollbar */
 .schedule-container::-webkit-scrollbar {
-  width: 8px;
   height: 8px;
+  width: 8px;
 }
 
 .schedule-container::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 4px;
 }
 
 .schedule-container::-webkit-scrollbar-thumb {
@@ -170,10 +182,12 @@ const isDevelopment = computed(() => {
   background: #666;
 }
 
-@media (max-width: 768px) {
+/* Responsive adjustments */
+@media (max-width: 1024px) {
   .schedule-container {
-    width: 100%;
+    width: 100vw;
+    margin-left: -1rem;
+    margin-right: -1rem;
   }
 }
 </style>
-

@@ -9,6 +9,7 @@ use App\Models\Section;
 use App\Models\SchoolYear;
 use App\Http\Requests\StoreStudentGradeRequest;
 use App\Http\Requests\UpdateStudentGradeRequest;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -204,4 +205,60 @@ class StudentGradeController extends Controller
             return back()->with('error', 'Failed to delete grade: ' . $e->getMessage());
         }
     }
+
+
+    // For viewing course
+    public function viewGrades($studentGradeId) {
+        //get the student grade
+        $studentGrade = StudentGrade::where('id', $studentGradeId)->first();
+
+        // get the teacher who made a grade
+        $teacher = Teacher::select('first_name', 'last_name')
+            ->where('id', $studentGrade->teacher_id)
+            ->first();
+
+        // get the subject name and course code
+        $curriculum =  Curriculum::select('subject_name', 'course_code')
+            ->where('id', $studentGrade->curriculum_id)
+            ->first();
+
+
+        return Inertia::render('AdminDashboard/AdminViewGrade', [
+            'title' => 'Admin View Grades',
+            'studentGrade' => $studentGrade,
+            'teacher' => $teacher,
+            'curriculum' => $curriculum
+        ]);
+    }
+
+    // for admin approval grade
+    public function approve($studentGradeId) {
+        try {
+            // Get the student grade
+            $studentGrade = StudentGrade::findOrFail($studentGradeId);
+
+            // Update status to APPROVED
+            $studentGrade->grade_status = 'APPROVED';
+            $studentGrade->save();
+
+            return back()->with('success', 'Student grade approved successfully.');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error updating grade: ' . $e->getMessage());
+        }
+    }
+
+    public function reject($studentGradeId)
+    {
+        try {
+            $studentGrade = StudentGrade::findOrFail($studentGradeId);
+            $studentGrade->grade_status = 'REJECTED';
+            $studentGrade->save();
+
+            return back()->with('success', 'Student grade rejected successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error rejecting grade: ' . $e->getMessage());
+        }
+    }
+
 }

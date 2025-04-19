@@ -25,6 +25,10 @@ defineOptions({
 const props = defineProps({
     sections: Array,
     errors: Object,
+    activeSchoolYear: {
+        type: Object,
+        required: true
+    },
     flash: {
         type: Object,
         default: () => ({})
@@ -37,6 +41,7 @@ const selectedSection = ref(null);
 const loading = ref(false);
 const selectedYearLevel = ref('');
 const selectedSectionFilter = ref('');
+const selectedSchoolYear = ref('');
 const isModalOpen = ref(false);
 
 // Table headers
@@ -44,19 +49,20 @@ const tableHeaders = [
     { key: 'section', label: 'Section Name' },
     { key: 'year_level', label: 'Year Level' },
     { key: 'min_students', label: 'Minimum Students' },
-    { key: 'max_students', label: 'Maximum Students' }
+    { key: 'max_students', label: 'Maximum Students' },
+    { key: 'school_year', label: 'School Year' }
 ];
 
 // Action buttons for the table
 const actionButtons = [
     {
         label: 'Edit',
-        class: 'bg-[#559de6] text-white px-3 py-1 rounded cursor-pointer',
+        class: 'bg-blue-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-blue-600',
         action: (section) => editSection(section)
     },
     {
         label: 'Delete',
-        class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer',
+        class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600',
         action: (section) => deleteSection(section.id)
     }
 ];
@@ -80,12 +86,19 @@ const uniqueSections = computed(() => {
     return Array.from(sectionNames);
 });
 
+// Get unique school years for filter
+const uniqueSchoolYears = computed(() => {
+    const schoolYears = new Set(sections.value.map(section => section.school_year));
+    return Array.from(schoolYears);
+});
+
 // Filtered sections
 const filteredSections = computed(() => {
     return sections.value.filter(section => {
         const yearLevelMatch = !selectedYearLevel.value || section.year_level === selectedYearLevel.value;
         const sectionMatch = !selectedSectionFilter.value || section.section === selectedSectionFilter.value;
-        return yearLevelMatch && sectionMatch;
+        const schoolYearMatch = !selectedSchoolYear.value || section.school_year === selectedSchoolYear.value;
+        return yearLevelMatch && sectionMatch && schoolYearMatch;
     });
 });
 
@@ -93,6 +106,8 @@ const filteredSections = computed(() => {
 const form = useForm({
     section: '',
     year_level_id: '',
+    school_year: props.activeSchoolYear?.school_year || '',
+    school_year_status: props.activeSchoolYear?.school_year_status || '',
     minimum_number_students: '',
     maximum_number_students: ''
 });
@@ -121,6 +136,9 @@ const openAddModal = () => {
     isEditMode.value = false;
     selectedSection.value = null;
     form.reset();
+    // Set the school year fields to active school year when opening add modal
+    form.school_year = props.activeSchoolYear?.school_year || '';
+    form.school_year_status = props.activeSchoolYear?.school_year_status || '';
     isModalOpen.value = true;
 };
 
@@ -130,6 +148,8 @@ const editSection = (section) => {
     selectedSection.value = section;
     form.section = section.section;
     form.year_level_id = section.year_level_id;
+    form.school_year = section.school_year;
+    form.school_year_status = section.school_year_status;
     form.minimum_number_students = section.min_students;
     form.maximum_number_students = section.max_students;
     isModalOpen.value = true;
@@ -184,17 +204,37 @@ const submitForm = () => {
     }
 
     loading.value = true;
+    
+    // Prepare form data with exact field names matching the fillable array
+    const formData = {
+        section: form.section.trim(),
+        year_level_id: form.year_level_id,
+        school_year: props.activeSchoolYear?.school_year,
+        school_year_status: props.activeSchoolYear?.school_year_status,
+        minimum_number_students: parseInt(form.minimum_number_students),
+        maximum_number_students: parseInt(form.maximum_number_students)
+    };
+
     if (isEditMode.value && selectedSection.value) {
         // Update existing section
-        router.put(`/section/${selectedSection.value.id}`, form.data(), {
+        router.put(`/section/${selectedSection.value.id}`, formData, {
             preserveScroll: true,
             onSuccess: (page) => {
+                if (page.props.flash?.error) {
+                    showNotification(page.props.flash.error, 'error');
+                    return;
+                }
                 sections.value = page.props.sections;
                 closeModal();
                 showNotification('Section updated successfully');
             },
-            onError: () => {
-                showNotification('Failed to update section', 'error');
+            onError: (errors) => {
+                if (typeof errors === 'object') {
+                    Object.keys(errors).forEach(key => {
+                        form.setError(key, errors[key]);
+                    });
+                }
+                showNotification(errors.message || 'Failed to update section', 'error');
             },
             onFinish: () => {
                 loading.value = false;
@@ -202,17 +242,30 @@ const submitForm = () => {
         });
     } else {
         // Add new section
-        router.post('/section/add', form.data(), {
+        router.post('/section/add', formData, {
             preserveScroll: true,
             onSuccess: (page) => {
-                sections.value = page.props.sections;
-                closeModal();
-                if (page.props.flash.success) {
-                    showNotification(page.props.flash.success);
+                if (page.props.flash?.error) {
+                    showNotification(page.props.flash.error, 'error');
+                    loading.value = false;
+                    return;
+                }
+                
+                if (page.props.sections) {
+                    sections.value = page.props.sections;
+                    closeModal();
+                    showNotification(page.props.flash?.success || 'Section added successfully');
+                } else {
+                    showNotification('Error: No sections data received', 'error');
                 }
             },
-            onError: () => {
-                showNotification('Failed to add section', 'error');
+            onError: (errors) => {
+                if (typeof errors === 'object') {
+                    Object.keys(errors).forEach(key => {
+                        form.setError(key, errors[key]);
+                    });
+                }
+                showNotification(errors.message || 'Failed to add section', 'error');
             },
             onFinish: () => {
                 loading.value = false;
@@ -308,8 +361,18 @@ const showNotification = (message, type = 'success') => {
                     </option>
                 </select>
 
+                <select
+                    v-model="selectedSchoolYear"
+                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500"
+                >
+                    <option value="">All School Years</option>
+                    <option v-for="schoolYear in uniqueSchoolYears" :key="schoolYear" :value="schoolYear">
+                        {{ schoolYear }}
+                    </option>
+                </select>
+
                 <button 
-                    @click="() => { selectedYearLevel = ''; selectedSectionFilter = ''; }"
+                    @click="() => { selectedYearLevel = ''; selectedSectionFilter = ''; selectedSchoolYear = ''; }"
                     class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md px-3 py-2 text-sm"
                 >
                     Clear Filters
@@ -341,13 +404,13 @@ const showNotification = (message, type = 'success') => {
             <div class="grid grid-cols-2 gap-4">
                 <!-- Section Name -->
                 <div>
+                    <label for="section" class="block text-sm font-medium text-gray-700 mb-1">Section Name</label>
                     <input 
                         id="section" 
                         type="text" 
                         v-model="form.section"
                         class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.section }"
-                        placeholder="Enter Section Name"
                     >
                     <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">
                         {{ form.errors.section }}
@@ -356,6 +419,7 @@ const showNotification = (message, type = 'success') => {
 
                 <!-- Year Level -->
                 <div>
+                    <label for="year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
                     <select 
                         id="year_level" 
                         v-model="form.year_level_id"
@@ -372,15 +436,39 @@ const showNotification = (message, type = 'success') => {
                     </p>
                 </div>
 
+                <!-- School Year (Disabled) -->
+                <div>
+                    <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
+                    <input 
+                        id="school_year" 
+                        type="text" 
+                        :value="props.activeSchoolYear?.school_year"
+                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed"
+                        disabled
+                    >
+                </div>
+
+                <!-- Status (Disabled) -->
+                <div>
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <input 
+                        id="status" 
+                        type="text" 
+                        :value="props.activeSchoolYear?.school_year_status"
+                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed"
+                        disabled
+                    >
+                </div>
+
                 <!-- Minimum Students -->
                 <div>
+                    <label for="min_students" class="block text-sm font-medium text-gray-700 mb-1">Minimum Students</label>
                     <input 
                         id="min_students" 
                         type="number" 
                         v-model="form.minimum_number_students"
                         class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.minimum_number_students }"
-                        placeholder="Enter Minimum Students"
                     >
                     <p v-if="form.errors.minimum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.minimum_number_students }}
@@ -389,13 +477,13 @@ const showNotification = (message, type = 'success') => {
 
                 <!-- Maximum Students -->
                 <div>
+                    <label for="max_students" class="block text-sm font-medium text-gray-700 mb-1">Maximum Students</label>
                     <input 
                         id="max_students" 
                         type="number" 
                         v-model="form.maximum_number_students"
                         class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.maximum_number_students }"
-                        placeholder="Enter Maximum Students"
                     >
                     <p v-if="form.errors.maximum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.maximum_number_students }}

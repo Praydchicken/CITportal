@@ -51,9 +51,6 @@ const selectedSchoolYear = ref('');
 const selectedSection = ref('');
 const selectedYearLevel = ref('');
 const selectedSemester = ref('');
-const expandedRow = ref(null);
-const detailedStudentData = ref(null);
-const expansionLoading = ref(false);
 
 // Watch for props.students changes and maintain the order
 watch(() => props.students, (newStudents) => {
@@ -70,6 +67,8 @@ const enrolledStatus = computed(() => {
 });
 
 const enrolledStatusId = computed(() => enrolledStatus.value?.id);
+console.log(isModalOPen.value);
+
 // --- End Computed Property ---
 
 const openModal = (student) => {
@@ -100,16 +99,19 @@ const openModal = (student) => {
     form.semester_id = ""; // Renamed from semester
   }
 
-  isModalOPen.value = true; // Open the modal
+  isModalOPen.value = true; // Open the modal  
 };
 
 
 const closeModal = () => {
-  isModalOPen.value = false;
+   console.log("Closing modal...");
+  if (loading.value) return;
   selectedStudent.value = null;
   isEditMode.value = false;
   form.reset();  // Reset form data
   form.clearErrors();  // Clear form errors
+        isModalOPen.value = false;
+
 };
 
 
@@ -171,6 +173,7 @@ const submitForm = () => {
           students.value.unshift(updatedStudent);
           showNotification('Student updated successfully');
         }
+        isModalOPen.value = false;
         form.reset();
         closeModal();
       },
@@ -202,6 +205,7 @@ const submitForm = () => {
         }
         
         // Close modal and reset form
+          isModalOPen.value = false;
         form.reset();
         closeModal();
       },
@@ -216,6 +220,10 @@ const submitForm = () => {
     });
   }
 };
+
+const viewStudentInfo = (student) => {
+   router.visit(`/students/${student.id}/details`)
+}
 
 const deleteStudent = (id) => {
     Swal.fire({
@@ -256,19 +264,6 @@ const tableHeaders = [
   { key: 'section.section', label: 'Section' },
   { key: 'year_level.year_level', label: 'Year Level' },
   { key: 'status.status_name', label: 'Status' }
-];
-
-const actionButtons = [
-  {
-    label: 'Edit',
-    class: 'bg-green-500 text-white px-3 py-1 rounded cursor-pointer',
-    action: (student) => openModal(student)
-  },
-  {
-    label: 'Delete',
-    class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer',
-    action: (student) => deleteStudent(student.id)
-  },
 ];
 
 // Modify the ReusableTable component to handle nested properties
@@ -375,37 +370,21 @@ watch(selectedYearLevel, (newValue) => {
   selectedSection.value = '';
 });
 
-// Updated toggleRow function (Console logs removed)
-const toggleRow = async (student) => {
-  const studentId = student.id;
-  if (expandedRow.value === studentId) {
-    expandedRow.value = null;
-    detailedStudentData.value = null;
-  } else {
-    expandedRow.value = studentId;
-    detailedStudentData.value = null;
-    expansionLoading.value = true;
-    try {
-      const response = await axios.get(`/students/${studentId}/details`);
-      detailedStudentData.value = response.data;
-      console.log(detailedStudentData);
-      
-    } catch (error) {
-      console.error('Error fetching student details:', error);
-      showNotification('Failed to load student details.', 'error');
-    } finally {
-      expansionLoading.value = false;
-    }
-  }
-};
-
 // Keep tableData computed property
 const tableData = computed(() => {
-  return filteredStudents.value.map(student => ({
-    ...student,
-    isExpanded: expandedRow.value === student.id
-  }));
+  return filteredStudents.value;
 });
+
+// Add function to handle pagination
+const handlePageChange = (url) => {
+  if (!url) return;
+  
+  router.visit(url, {
+    preserveState: true,
+    preserveScroll: true,
+    only: ['students']
+  });
+};
 
 </script>
 
@@ -570,63 +549,62 @@ const tableData = computed(() => {
     </div> 
 
     <!-- Reusable Table Component -->
-    <ReusableTable
-      :headers="tableHeaders"
-      :data="tableData"
-      :actions="true"
-      :action-buttons="actionButtons"
-      :row-clickable="true"
-      @row-click="toggleRow"
-    >
-      <template #row-details="{ item }">
-        <!-- Display Loading State -->
-        <div v-if="expansionLoading" class="bg-[#1a3047] text-gray-100 p-6 text-center">
-          Loading details...
-        </div>
-        <!-- Display Fetched Data -->
-        <div v-else-if="detailedStudentData" class="bg-[#1a3047] text-gray-100 p-6">
-          <!-- Student Details Section -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-white mb-4 text-center border-b border-gray-600 pb-2">Student Details</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm">
-              <div>
-                <p><strong class="font-medium text-gray-300">Full Name:</strong> {{ detailedStudentData.first_name }} {{ detailedStudentData.last_name }}</p>
-                <p><strong class="font-medium text-gray-300">Student No:</strong> {{ detailedStudentData.student_number || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Section:</strong> {{ detailedStudentData.section?.section || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Year Level:</strong> {{ detailedStudentData.section?.year_level?.year_level || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Status:</strong> {{ detailedStudentData.status?.status_name || 'N/A' }}</p>
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead>
+          <tr class="bg-[#1a3047] text-white">
+            <th v-for="header in tableHeaders" :key="header.key" 
+                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+              {{ header.label }}
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr v-for="(student, index) in tableData" :key="student.id" 
+              :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+            <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              {{ processNestedValue(student, header.key) }}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <div class="flex space-x-2">
+                 <button @click="viewStudentInfo(student)" 
+                    class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">View</button>
+                <button @click="openModal(student)" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Edit</button>
+                <button @click="deleteStudent(student.id)" 
+                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Delete</button>
               </div>
-              <div>
-                <p><strong class="font-medium text-gray-300">Email:</strong> {{ detailedStudentData.user?.email || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Phone:</strong> {{ detailedStudentData.phone_number || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Gender:</strong> {{ detailedStudentData.gender || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Address:</strong> {{ detailedStudentData.address || 'N/A' }}</p>
-                 <!-- Semester from first load -->
-                <p><strong class="font-medium text-gray-300">Semester:</strong> {{ detailedStudentData.student_loads?.[0]?.faculty_load?.semester?.semester_name || 'N/A' }}</p>
-              </div>
-            </div>
-          </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-          <!-- Subjects and Schedule Section -->
-          <div>
-            <h3 class="text-lg font-semibold text-white mb-4 text-center border-b border-gray-600 pb-2">Subjects and Schedule</h3>
-            <div v-if="detailedStudentData.student_loads && detailedStudentData.student_loads.length > 0" class="space-y-2 text-sm">
-              <div v-for="load in detailedStudentData.student_loads" :key="load.id" class="p-2 border-b border-gray-700 last:border-b-0">
-                 <!-- Use confirmed structure -->
-                <p><strong class="font-medium text-gray-300">Subject:</strong> {{ load.faculty_load?.curriculum?.subject_name || 'N/A' }} ({{ load.faculty_load?.curriculum?.course_code || 'N/A' }})</p>
-                <p><strong class="font-medium text-gray-300">Schedule:</strong> {{ load.faculty_load?.schedule?.day || 'N/A' }} | {{ load.faculty_load?.schedule?.start_time || 'N/A' }} - {{ load.faculty_load?.schedule?.end_time || 'N/A' }}</p>
-                <p><strong class="font-medium text-gray-300">Teacher:</strong> {{ load.faculty_load?.teacher?.first_name || '' }} {{ load.faculty_load?.teacher?.last_name || 'N/A' }}</p>
-              </div>
-            </div>
-            <p v-else class="text-center text-gray-400 italic">No subjects assigned</p>
-          </div>
-        </div>
-        <!-- Display Error State -->
-        <div v-else class="bg-[#1a3047] text-gray-100 p-6 text-center text-red-400">
-           Failed to load details.
-        </div>
-      </template>
-    </ReusableTable>
+    <!-- Pagination -->
+    <div v-if="students.value && students.value.links && students.value.links.length > 3" class="mt-6 flex justify-center">
+      <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+        <template v-for="(link, index) in students.value.links" :key="index">
+          <a
+            v-if="link.url"
+            :href="link.url"
+            @click.prevent="handlePageChange(link.url)"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+            :class="{
+              'z-10 bg-[#1a3047] text-white border-[#1a3047]': link.active
+            }"
+            v-html="link.label"
+          ></a>
+          <span
+            v-else
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500"
+            v-html="link.label"
+          ></span>
+        </template>
+      </nav>
+    </div>
 
     <!-- Reusable Modal Component -->
     <ReusableModal :show="isModalOPen" :title="isEditMode ? 'Edit Student' : 'Add Student'" :loading="loading"
@@ -733,7 +711,9 @@ const tableData = computed(() => {
 
         <!-- 3rd Row -->
         <div>
-          <label for="phone_number" class="block text-sm font-medium text-gray-700">Phone Number</label>
+          <label for="phone_number" class="block text-sm font-medium text-gray-700">
+            Phone Number <span class="text-gray-500 text-xs">(Optional)</span>
+          </label>
           <input 
             type="text" 
             name="phone_number" 
@@ -766,7 +746,9 @@ const tableData = computed(() => {
         </div>
 
         <div>
-          <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+          <label for="address" class="block text-sm font-medium text-gray-700">
+            Address <span class="text-gray-500 text-xs">(Optional)</span>
+          </label>
           <input 
             type="text" 
             name="address" 
@@ -829,7 +811,7 @@ const tableData = computed(() => {
             readonly 
           />
           <!-- Hidden input to actually submit the ID -->
-          <input type="hidden" name="student_status_id" v-model="form.student_status_id"> 
+          <!-- <input type="hidden" name="student_status_id" v-model="form.student_status_id">  -->
         </div>
 
         <!-- 5th Row -->

@@ -11,7 +11,7 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { useForm } from '@inertiajs/vue3'
 import { defineProps } from "vue";
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import Swal from 'sweetalert2';
@@ -30,6 +30,10 @@ const props = defineProps({
   flash: {
     type: Object,
     default: () => ({})
+  },
+  curriculums: {
+    type: Object,
+    required: true
   }
 });
 
@@ -141,28 +145,91 @@ const closeModal = () => {
   form.clearErrors();
 };
 
+// Add a computed property to automatically calculate the total units
+const computedTotalUnits = computed(() => {
+  const lectureUnits = parseFloat(form.lecture_units) || 0;
+  const labUnits = parseFloat(form.lab_units) || 0;
+  return lectureUnits + labUnits;
+});
+
+// Watch for changes to lecture_units and lab_units to update total_units
+watch([() => form.lecture_units, () => form.lab_units], () => {
+  // Update form.total_units automatically
+  form.total_units = computedTotalUnits.value;
+});
+
+// Update the submitForm function with the correct routes
 const submitForm = () => {
   loading.value = true;
+  
+  // Clear previous errors
+  form.clearErrors();
+
+  // Validate required fields
+  let hasErrors = false;
+
+  // Validate Year Level
+  if (!form.year_level_id) {
+    form.setError('year_level_id', 'Year Level is required');
+    hasErrors = true;
+  }
+
+  // Validate Semester
+  if (!form.semester_id) {
+    form.setError('semester_id', 'Semester is required');
+    hasErrors = true;
+  }
+
+  // Validate Course Code
+  if (!form.course_code || form.course_code.trim() === '') {
+    form.setError('course_code', 'Course Code is required');
+    hasErrors = true;
+  }
+
+  // Validate Subject Name
+  if (!form.subject_name || form.subject_name.trim() === '') {
+    form.setError('subject_name', 'Subject Name is required');
+    hasErrors = true;
+  }
+
+  // Description is optional - removed validation
+
+  // Validate Lecture Units
+  const lectureUnits = parseFloat(form.lecture_units);
+  if (isNaN(lectureUnits) || lectureUnits < 0) {
+    form.setError('lecture_units', 'Lecture units must be a valid number');
+    hasErrors = true;
+  }
+
+  // Validate Laboratory Units
+  const labUnits = parseFloat(form.lab_units);
+  if (isNaN(labUnits) || labUnits < 0) {
+    form.setError('lab_units', 'Laboratory units must be a valid number');
+    hasErrors = true;
+  }
+
+  // Set the total_units field automatically
+  form.total_units = lectureUnits + labUnits;
+
+  if (hasErrors) {
+    loading.value = false;
+    showNotification('Please fix the errors in the form', 'error');
+    return;
+  }
+
   if (isEditMode.value && selectedSubject.value) {
-    // Update existing subject
+    // Update existing subject using the correct route
     router.put(`/curriculum/subject/${selectedSubject.value.id}/update`, form.data(), {
       preserveScroll: true,
-      onSuccess: (page) => {
-        // Find the updated subject in the server response
-        const updatedSubject = page.props.subjects.find(s => s.id === selectedSubject.value.id);
-        if (updatedSubject) {
-          // Remove the subject from its current position
-          const editedSubjectIndex = subjects.value.findIndex(s => s.id === selectedSubject.value.id);
-          if (editedSubjectIndex !== -1) {
-            subjects.value.splice(editedSubjectIndex, 1);
-          }
-          // Add the updated subject to the top
-          subjects.value.unshift(updatedSubject);
-          showNotification('Subject updated successfully');
-        }
+      onSuccess: () => {
+        handleSearch(); // Refresh the data after update
+        showNotification('Subject updated successfully');
         closeModal();
       },
-      onError: () => {
+      onError: (errors) => {
+        Object.keys(errors).forEach(key => {
+          form.setError(key, errors[key]);
+        });
         showNotification('Failed to update subject', 'error');
       },
       onFinish: () => {
@@ -173,13 +240,15 @@ const submitForm = () => {
     // Add new subject
     router.post('/curriculum/subject/add', form.data(), {
       preserveScroll: true,
-      onSuccess: (page) => {
-        // Update the entire subjects list with the new data from the server
-        subjects.value = page.props.subjects;
+      onSuccess: () => {
+        handleSearch(); // Refresh the data after adding
         showNotification('Subject added successfully');
         closeModal();
       },
-      onError: () => {
+      onError: (errors) => {
+        Object.keys(errors).forEach(key => {
+          form.setError(key, errors[key]);
+        });
         showNotification('Failed to add subject', 'error');
       },
       onFinish: () => {
@@ -188,6 +257,11 @@ const submitForm = () => {
     });
   }
 };
+
+// Add computed property to check if form is valid
+const isFormValid = computed(() => {
+  return !Object.keys(form.errors).length;
+});
 
 const deleteSubject = (id) => {
   Swal.fire({
@@ -281,6 +355,147 @@ const filteredSubjects = computed(() => {
 
   return filtered;
 });
+
+const filteredCurriculums = computed(() => {
+  // Check if curriculums and curriculums.data exist to avoid null reference errors
+  if (!props.curriculums || !props.curriculums.data) {
+    return [];
+  }
+  
+  // We're returning the data array directly because filtering is handled server-side
+  // via the handleSearch function that makes a new request with the filter params
+  return props.curriculums.data;
+});
+
+const yearLevelOptions = computed(() => {
+  return props.yearLevels.map(level => ({
+    value: level.id,
+    label: level.year_level
+  }));
+});
+
+const semesterOptions = computed(() => {
+  return props.semesters.map(semester => ({
+    value: semester.id,
+    label: semester.semester_name
+  }));
+});
+
+// Add a debounce function for search
+let searchTimeout;
+const debounceSearch = () => {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    handleSearch();
+  }, 500); // 500ms debounce
+};
+
+// Update handleSearch to use admin.curriculum.config route
+const handleSearch = () => {
+  router.get(route('admin.curriculum.config'), {
+    search: searchQuery.value,
+    year_level: selectedYearLevelFilter.value,
+    semester: selectedSemesterFilter.value
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    only: ['curriculums']
+  });
+};
+
+const handlePageChange = (url) => {
+  if (!url) return;
+  
+  router.visit(url, {
+    preserveState: true,
+    preserveScroll: true,
+    only: ['curriculums']
+  });
+};
+
+// Add a function to debug and log the data
+const logData = () => {
+  console.log('Curriculums prop:', props.curriculums);
+  console.log('Filtered curriculums:', filteredCurriculums.value);
+};
+
+// Call the debug function when component mounts
+onMounted(() => {
+  logData();
+});
+
+// Fix the editCurriculum function to correctly populate the form
+const editCurriculum = (curriculum) => {
+  console.log("Editing curriculum:", curriculum); // Add debugging
+  
+  isEditMode.value = true;
+  selectedSubject.value = curriculum;
+
+  // Pre-fill the form with curriculum data, ensuring field names match
+  form.year_level_id = curriculum.year_level_id;
+  form.semester_id = curriculum.semester_id;
+  form.course_code = curriculum.course_code;
+  form.subject_name = curriculum.subject_name;
+  form.description = curriculum.description || '';
+  form.lecture_units = curriculum.lecture_units;
+  form.lab_units = curriculum.lab_units;
+  
+  // The total_units field will be calculated automatically via the watcher
+  
+  // Open the modal
+  isModalOpen.value = true;
+};
+
+const confirmDelete = (curriculum) => {
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#1a3047',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      loading.value = true;
+      router.delete(`/curriculum/subject/${curriculum.id}/delete`, {
+        preserveScroll: true,
+        onSuccess: () => {
+          handleSearch(); // Refresh the data after deletion
+          showNotification('Subject deleted successfully');
+        },
+        onError: () => {
+          showNotification('Failed to delete subject', 'error');
+        },
+        onFinish: () => {
+          loading.value = false;
+        }
+      });
+    }
+  });
+};
+
+// Add other missing state variables if not already defined
+const selectedCurriculum = ref(null);
+const isDeleteModalOpen = ref(false);
+
+// Add a function to clear filters and trigger search
+const clearFiltersAndSearch = () => {
+  selectedYearLevelFilter.value = '';
+  selectedSemesterFilter.value = '';
+  searchQuery.value = '';
+  handleSearch();
+};
+
+// Add a computed property or method to calculate units if needed
+const getTotalUnits = (curriculum) => {
+  if (!curriculum) return 0;
+  
+  const lectureUnits = parseFloat(curriculum.lecture_units) || 0;
+  const labUnits = parseFloat(curriculum.lab_units) || 0;
+  
+  return lectureUnits + labUnits;
+};
 </script>
 
 <template>
@@ -300,6 +515,7 @@ const filteredSubjects = computed(() => {
         <select
           v-model="selectedYearLevelFilter"
           class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
+          @change="handleSearch"
         >
           <option value="">All Year Levels</option>
           <option
@@ -315,6 +531,7 @@ const filteredSubjects = computed(() => {
         <select
           v-model="selectedSemesterFilter"
           class="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-700 hover:border-gray-400 focus:outline-none focus:border-blue-500"
+          @change="handleSearch"
         >
           <option value="">All Semesters</option>
           <option
@@ -328,7 +545,7 @@ const filteredSubjects = computed(() => {
 
         <!-- Clear Filters Button -->
         <button
-          @click="clearFilters"
+          @click="clearFiltersAndSearch"
           class="px-4 py-2 bg-[#1a3047] text-white rounded-md hover:bg-[#2a4057] transition-colors duration-200"
         >
           Clear Filters
@@ -343,6 +560,7 @@ const filteredSubjects = computed(() => {
             type="text" 
             placeholder="Search for subjects..." 
             class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[120%]"
+            @input="debounceSearch"
           >
         </form>
         <button @click="openModal(null)" 
@@ -353,12 +571,77 @@ const filteredSubjects = computed(() => {
     </div>
 
     <!-- Reusable Table Component -->
-    <ReusableTable 
-      :headers="tableHeaders" 
-      :data="filteredSubjects" 
-      :actions="true" 
-      :action-buttons="actionButtons" 
-    />
+    <div class="overflow-x-auto mt-6">
+      <table class="min-w-full divide-y divide-gray-200 ">
+        <thead>
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Year Level</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Semester</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Course Code</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Subject Name</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Lecture Units</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Lab Units</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Total Units</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr v-for="curriculum in filteredCurriculums" :key="curriculum.id">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.year_level?.year_level }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.semester?.semester_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.course_code }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.subject_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.lecture_units }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.lab_units }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ getTotalUnits(curriculum) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              <div class="flex space-x-2">
+                <button @click="editCurriculum(curriculum)" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">Edit</button>
+                <button @click="confirmDelete(curriculum)" class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">Delete</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- No data message -->
+      <div v-if="!filteredCurriculums.length" class="text-center py-10 bg-gray-100 rounded-lg mt-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        </svg>
+        <p class="text-gray-500 font-medium mt-2">No curriculum data found</p>
+        <p class="text-gray-400 text-sm mt-1">Try adjusting your filters or add new subjects</p>
+        <button 
+          @click="openModal(null)" 
+          class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
+        >
+          Add New Subject
+        </button>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div v-if="curriculums && curriculums.links && curriculums.links.length > 3" class="mt-6 flex justify-center">
+      <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+        <template v-for="(link, index) in curriculums.links" :key="index">
+          <a
+            v-if="link.url"
+            :href="link.url"
+            @click.prevent="handlePageChange(link.url)"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+            :class="{
+              'z-10 bg-blue-500 text-white border-blue-500': link.active
+            }"
+            v-html="link.label"
+          ></a>
+          <span
+            v-else
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500"
+            v-html="link.label"
+          ></span>
+        </template>
+      </nav>
+    </div>
 
     <!-- Reusable Modal Component -->
     <ReusableModal :show="isModalOpen" :title="isEditMode ? 'Edit Subject' : 'Add Subject'" :loading="loading"
@@ -367,7 +650,9 @@ const filteredSubjects = computed(() => {
       <div class="grid grid-cols-2 gap-4">
         <!-- Year Level -->
         <div>
+          <label for="year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
           <select 
+            id="year_level"
             v-model="form.year_level_id" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.year_level_id }"
@@ -384,7 +669,9 @@ const filteredSubjects = computed(() => {
 
         <!-- Semester -->
         <div>
+          <label for="semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
           <select 
+            id="semester"
             v-model="form.semester_id" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.semester_id }"
@@ -401,10 +688,11 @@ const filteredSubjects = computed(() => {
 
         <!-- Course Code -->
         <div>
+          <label for="course_code" class="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
           <input 
             type="text" 
+            id="course_code"
             name="course_code" 
-            placeholder="Enter Course Code (e.g., CS301)" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.course_code }"
             v-model="form.course_code"
@@ -416,10 +704,11 @@ const filteredSubjects = computed(() => {
 
         <!-- Subject Name -->
         <div>
+          <label for="subject_name" class="block text-sm font-medium text-gray-700 mb-1">Subject Name</label>
           <input 
             type="text" 
+            id="subject_name"
             name="subject_name" 
-            placeholder="Enter Subject Name" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.subject_name }"
             v-model="form.subject_name"
@@ -431,9 +720,10 @@ const filteredSubjects = computed(() => {
 
         <!-- Description -->
         <div class="col-span-2">
+          <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
           <textarea 
+            id="description"
             name="description" 
-            placeholder="Enter Description" 
             class="input-field-add-student min-h-[100px]"
             :class="{ 'border-red-500': form.errors.description }"
             v-model="form.description"
@@ -445,10 +735,11 @@ const filteredSubjects = computed(() => {
 
         <!-- Lecture Units -->
         <div>
+          <label for="lecture_units" class="block text-sm font-medium text-gray-700 mb-1">Lecture Units</label>
           <input 
             type="text" 
+            id="lecture_units"
             name="lecture_units" 
-            placeholder="Enter Lecture Units" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.lecture_units }"
             v-model="form.lecture_units"
@@ -460,10 +751,11 @@ const filteredSubjects = computed(() => {
 
         <!-- Laboratory Units -->
         <div>
+          <label for="lab_units" class="block text-sm font-medium text-gray-700 mb-1">Laboratory Units</label>
           <input 
             type="text" 
+            id="lab_units"
             name="lab_units" 
-            placeholder="Enter Laboratory Units" 
             class="input-field-add-student"
             :class="{ 'border-red-500': form.errors.lab_units }"
             v-model="form.lab_units"
@@ -475,14 +767,17 @@ const filteredSubjects = computed(() => {
 
         <!-- Total Units -->
         <div>
+          <label for="total_units" class="block text-sm font-medium text-gray-700 mb-1">Total Units</label>
           <input 
-            type="number" 
+            type="text" 
+            id="total_units"
             name="total_units" 
-            placeholder="Enter Total Units" 
-            class="input-field-add-student"
+            class="input-field-add-student bg-gray-100"
             :class="{ 'border-red-500': form.errors.total_units }"
-            v-model="form.total_units"
+            v-model="computedTotalUnits"
+            readonly
           >
+          <p class="text-xs text-gray-500 mt-1">Automatically calculated from lecture and laboratory units</p>
           <p v-if="form.errors.total_units" class="text-[#FF0000] text-sm mt-1">
             {{ form.errors.total_units }}
           </p>

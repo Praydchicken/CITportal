@@ -49,8 +49,9 @@ class FacultyLoadController extends Controller
             });
         $yearLevels = YearLevel::all();
         
-        // Get school years
+        // Get school years and active school year
         $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
         
         // Get curricula with their relationships
         $curricula = Curriculum::with(['year_level', 'semester'])
@@ -78,6 +79,7 @@ class FacultyLoadController extends Controller
             'yearLevels' => $yearLevels,
             'curricula' => $curricula,
             'schoolYears' => $schoolYears,
+            'activeSchoolYear' => $activeSchoolYear,
             'semesters' => $semesters
         ]);
     }
@@ -107,11 +109,13 @@ class FacultyLoadController extends Controller
             'semester_id' => 'required|exists:semesters,id'
         ]);
 
-        // Optional: Get active school year if needed for student filtering
-        // $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
-        // if (!$activeSchoolYear) {
-        //     return back()->withErrors(['message' => 'Cannot create faculty load: No active school year set.']);
-        // }
+        // dd($validated['year_level_id']);
+
+        // Get active school year
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
+        if (!$activeSchoolYear) {
+            return back()->withErrors(['message' => 'Cannot create faculty load: No active school year set.']);
+        }
 
         try {
             DB::beginTransaction();
@@ -127,6 +131,7 @@ class FacultyLoadController extends Controller
             $teacherConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
                 ->where('faculty_loads.teacher_id', $validated['teacher_id'])
                 ->where('class_schedules.day', $validated['day'])
+                ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
                 ->where(function($query) use ($validated) {
                     // Check for overlapping time slots
                     $query->where(function($q) use ($validated) {
@@ -154,6 +159,7 @@ class FacultyLoadController extends Controller
             $sectionConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
                 ->where('faculty_loads.section_id', $validated['section_id'])
                 ->where('class_schedules.day', $validated['day'])
+                ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
                 ->where(function($query) use ($validated) {
                     // Check for overlapping time slots
                     $query->where(function($q) use ($validated) {
@@ -177,27 +183,27 @@ class FacultyLoadController extends Controller
                 return back()->withErrors(['message' => 'Schedule conflict: This section already has a class scheduled during this time slot.']);
             }
 
-            // Create the faculty load
+            // Create the faculty load with school year
             $facultyLoad = FacultyLoad::create([
                 'teacher_id' => $validated['teacher_id'],
                 'curriculum_id' => $validated['curriculum_id'],
                 'section_id' => $validated['section_id'],
                 'year_level_id' => $validated['year_level_id'],
                 'class_schedule_id' => $classSchedule->id,
-                'semester_id' => $validated['semester_id']
-                // Optional: 'school_year_id' => $activeSchoolYear->id,
+                'semester_id' => $validated['semester_id'],
+                'school_year_id' => $activeSchoolYear->id
             ]);
 
             // --- Automatically Assign Students to this New Load --- 
             $studentsToAssign = Student::where('year_level_id', $validated['year_level_id'])
                                 ->where('semester_id', $validated['semester_id'])
-                                ->where('section_id', $validated['section_id']) // Still need section match
-                                // ->where('school_year_id', $activeSchoolYear->id) // Optional: Filter by active school year
-                                ->whereHas('status', function($query) { // Ensure student is Enrolled
+                                ->where('section_id', $validated['section_id'])
+                                ->where('school_year_id', $activeSchoolYear->id)
+                                ->whereHas('status', function($query) {
                                     $query->where('status_name', 'Enrolled');
                                 })
-                                ->pluck('id'); // Get only the IDs
-
+                                ->pluck('id');
+        
             $studentLoadData = [];
             foreach ($studentsToAssign as $studentId) {
                 $studentLoadData[] = [
@@ -225,11 +231,7 @@ class FacultyLoadController extends Controller
             \Log::error('Faculty Load Creation Error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
             
-            if (config('app.debug')) {
-                return back()->withErrors(['message' => 'Error: ' . $e->getMessage()]);
-            }
-            
-            return back()->withErrors(['message' => 'An error occurred while creating the faculty load.']);
+            return back()->withErrors(['message' => 'An error occurred while creating the faculty load: ' . $e->getMessage()]);
         }
     }
 
@@ -265,6 +267,12 @@ class FacultyLoadController extends Controller
             'semester_id' => 'required|exists:semesters,id'
         ]);
 
+        // Get active school year
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
+        if (!$activeSchoolYear) {
+            return back()->withErrors(['message' => 'Cannot update faculty load: No active school year set.']);
+        }
+
         try {
             DB::beginTransaction();
 
@@ -283,6 +291,7 @@ class FacultyLoadController extends Controller
                 ->where('faculty_loads.teacher_id', $validated['teacher_id'])
                 ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
                 ->where('class_schedules.day', $validated['day'])
+                ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
                 ->where(function($query) use ($validated) {
                     // Check for overlapping time slots
                     $query->where(function($q) use ($validated) {
@@ -311,6 +320,7 @@ class FacultyLoadController extends Controller
                 ->where('faculty_loads.section_id', $validated['section_id'])
                 ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
                 ->where('class_schedules.day', $validated['day'])
+                ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
                 ->where(function($query) use ($validated) {
                     // Check for overlapping time slots
                     $query->where(function($q) use ($validated) {
@@ -334,14 +344,15 @@ class FacultyLoadController extends Controller
                 return back()->withErrors(['message' => 'Schedule conflict: This section already has another class scheduled during this time slot.']);
             }
 
-            // Update faculty load with the correct IDs
+            // Update faculty load with the correct IDs and school year
             $facultyLoad->update([
                 'teacher_id' => $validated['teacher_id'],
                 'curriculum_id' => $validated['curriculum_id'],
                 'section_id' => $validated['section_id'],
                 'year_level_id' => $validated['year_level_id'],
                 'class_schedule_id' => $classSchedule->id,
-                'semester_id' => $validated['semester_id']
+                'semester_id' => $validated['semester_id'],
+                'school_year_id' => $activeSchoolYear->id
             ]);
 
             DB::commit();

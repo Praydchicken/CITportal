@@ -5,43 +5,45 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
+use App\Models\SchoolYear;
+
 class SectionSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      */
-    public function run(): void
+   public function run()
     {
-        // Fetch active school year ID
-        $activeSchoolYear = DB::table('school_years')->where('school_year_status', 'Active')->first();
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
 
-        // Check if an active school year was found
         if (!$activeSchoolYear) {
-            $this->command->error('No active school year found. Please seed the school_years table first.');
+            $this->command->error('No active school year found.');
             return;
         }
 
-        // Fetch existing Year Level IDs
-        $yearLevels = DB::table('year_levels')->pluck('id', 'year_level');
+        $schoolYearId = $activeSchoolYear->id;
 
-        $sections = ['A', 'B', 'C', 'D'];
-        $data = [];
+        $sections = [];
 
-        foreach ($yearLevels as $year => $yearId) {
-            foreach ($sections as $section) {
-                $data[] = [
-                    'year_level_id' => $yearId,
-                    'section' => $section,
-                    'school_year_id' => $activeSchoolYear->id, // 🟢 Add school year ID here
-                    'minimum_number_students' => 30,
-                    'maximum_number_students' => 50,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
+        for ($year = 1; $year <= 4; $year++) {
+            for ($semester = 1; $semester <= 2; $semester++) {
+                foreach (['A', 'B', 'C', 'D'] as $suffix) {
+                    $sectionName = ($year * 100 + $semester) . $suffix;
+
+                    $sections[] = [
+                        'year_level_id' => $year,
+                        'semester_id' => $semester,
+                        'section' => $sectionName,
+                        'minimum_number_students' => 30,
+                        'maximum_number_students' => 50,
+                        'school_year_id' => $schoolYearId, // ✅ Dynamic assignment
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
             }
         }
 
-        DB::table('sections')->insert($data);
-        $this->command->info('Sections seeded successfully with active school year.');
+        DB::table('sections')->insert($sections);
     }
 }

@@ -17,14 +17,20 @@ class Section extends Model
     protected $fillable = [
         'section',
         'year_level_id',
-        'school_year_id',
+        'semester_id',
         'minimum_number_students',
-        'maximum_number_students'
+        'maximum_number_students',
+        'school_year_id'
     ];
 
     public function schoolYear()
     {
         return $this->belongsTo(SchoolYear::class);
+    }
+
+    public function semester(): BelongsTo
+    {
+        return $this->belongsTo(Semester::class);
     }
 
 
@@ -35,7 +41,7 @@ class Section extends Model
 
     public function announcements(): BelongsToMany
     {
-        return $this->belongsToMany(AdminAnnouncement::class, 'announcement_section');
+        return $this->belongsToMany(TeacherAnnouncement::class, 'announcement_section');
     }
 
     public function studentGrades(): HasMany
@@ -46,6 +52,11 @@ class Section extends Model
     public function facultyLoads(): HasMany
     {
         return $this->hasMany(FacultyLoad::class);
+    }
+
+    public function students(): HasMany
+    {
+        return $this->hasMany(Student::class);
     }
 
 }

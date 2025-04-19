@@ -20,7 +20,7 @@ class Curriculum extends Model
         'description',
         'lecture_units',
         'lab_units',
-        'total_units'
+        'units'
     ];
 
     public function year_level(): BelongsTo {

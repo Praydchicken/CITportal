@@ -43,6 +43,11 @@ class Teacher extends Model
         return $this->hasMany(FacultyLoad::class);
     }
 
+    public function studentGrades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class);
+    }
+
     protected static function booted()
     {
         static::deleting(function ($teacher) {

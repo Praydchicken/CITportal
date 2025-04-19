@@ -18,7 +18,7 @@ const adminLinks = [
   { name: "Class Schedule", url: route('teacher.class.schedule') },
   { name: "Assigned Subjects", url: route('teacher.assigned.subjects') },
   { name: "Assigned Students", url: route('teacher.assigned.students') },
-  { name: "Grade Management", url: '#' },
+  { name: "Grade Management", url: route('teacher.grade.management') },
   { name: "Announcements", url: route('teacher.announcement') },
 ];
 

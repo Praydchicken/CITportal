@@ -28,8 +28,21 @@ class TeacherController extends Controller
 
         // Get teacher record with relationships
         $teacher = Teacher::where('user_id', $user->id)
-            ->with(['user', 'schoolYear', 'facultyLoads.curriculum', 'facultyLoads.section', 'facultyLoads.yearLevel', 'facultyLoads.schedule', 'facultyLoads.semester'])
+            ->with(['user', 'schoolYear', 'facultyLoads' => function($query) {
+                $query->with([
+                    'curriculum', 
+                    'section.students', 
+                    'yearLevel', 
+                    'schedule', 
+                    'semester',
+                   
+                ]);
+            }])
             ->first();
+    
+        // get the grade student
+        $teacherStudentGrades = Teacher::where('user_id', $user->id)->with('studentGrades')->get();
+        // dd($teacherStudentGrades);
 
         // Check if teacher exists
         if (!$teacher) {
@@ -37,19 +50,43 @@ class TeacherController extends Controller
             return redirect()->route('login'); // Or appropriate redirect
         }
 
-        // Get relevant announcements
-        // $announcements = TeacherAnnouncement::where(function($query) use ($teacher) {
-        //     $query->whereDoesntHave('sections')
-        //         ->whereDoesntHave('yearLevels')
-        //         ->orWhereHas('sections', function($q) use ($teacher) {
-        //             $q->whereIn('sections.id', $teacher->facultyLoads->pluck('section_id'));
-        //         })
-        //         ->orWhereHas('yearLevels', function($q) use ($teacher) {
-        //             $q->whereIn('year_levels.id', $teacher->facultyLoads->pluck('year_level_id'));
-        //         });
-        // })
-        // ->orderBy('created_at', 'desc')
-        // ->get();
+        // Calculate statistics
+        $totalAssignedStudents = 0;
+        $totalAssignedSubjects = $teacher->facultyLoads->count();
+        $totalApprovedGrades = 0;
+        $totalPendingGrades = 0;
+        $totalRejectedGrades = 0;
+
+        // Get unique students and count grade statuses
+        $studentIds = [];
+        foreach ($teacher->facultyLoads as $load) {
+            // Count students in each section
+            if ($load->section && $load->section->students) {
+                foreach ($load->section->students as $student) {
+                    if (!in_array($student->id, $studentIds)) {
+                        $studentIds[] = $student->id;
+                        $totalAssignedStudents++;
+                    }
+                }
+            }
+
+            // Count grade statuses
+            foreach ($teacherStudentGrades as $teacher) {
+                foreach ($teacher->studentGrades as $grade) {
+                    switch ($grade->grade_status) {
+                        case 'Approved':
+                            $totalApprovedGrades++;
+                            break;
+                        case 'Pending':
+                            $totalPendingGrades++;
+                            break;
+                        case 'Rejected':
+                            $totalRejectedGrades++;
+                            break;
+                    }
+                }
+            }
+        }
 
         // Get teacher's class schedule
         $classSchedule = $teacher->facultyLoads->map(function($load) {
@@ -74,12 +111,17 @@ class TeacherController extends Controller
                 ]
             ],
             'welcomeMessage' => "Welcome back, {$teacher->first_name} {$teacher->last_name}!",
-            // 'announcements' => $announcements,
             'classSchedule' => $classSchedule,
+            'statistics' => [
+                'totalAssignedStudents' => $totalAssignedStudents,
+                'totalAssignedSubjects' => $totalAssignedSubjects,
+                'totalApprovedGrades' => $totalApprovedGrades,
+                'totalPendingGrades' => $totalPendingGrades,
+                'totalRejectedGrades' => $totalRejectedGrades,
+            ],
             'debug' => [] // If you want to enable debugging in the future
         ]);
     }
-
     /**
      * Show the form for creating a new resource.
      */

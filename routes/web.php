@@ -13,13 +13,21 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\PrintTORController;
 use App\Http\Controllers\StudentScheduleController;
 use App\Http\Controllers\TeacherAssignedStudentsController;
 use App\Http\Controllers\TeacherAssignedSubjectsController;
 use App\Http\Controllers\TeacherClassScheduleController;
+use App\Http\Controllers\TeacherGradeManagementController;
+use App\Http\Controllers\ViewCourseGradeController;
+use App\Http\Controllers\ViewStudentInfoController;
+use App\Http\Middleware\IsAdmin;
+use App\Http\Middleware\IsStudent;
+use App\Http\Middleware\IsTeacher;
 use App\Models\Teacher;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Session;
 
 // This is only for the guest
 Route::middleware('guest')->group(function () {
@@ -37,8 +45,11 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     // Login route
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
+});
 
-    // For admin routes
+// Admin Routes
+Route::middleware(['auth', IsAdmin::class])->group(function () {
+     // For admin routes
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/student/info', [PostStudentInfoController::class,'index'])->name('student.info');
 
@@ -61,6 +72,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
     Route::delete('/student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
     Route::put('/student/{student}/update', [PostStudentInfoController::class, 'update']);
+
+
     Route::get('/admin/section/management', [PostSectionManagementController::class,'index'])->name('admin.section.management');
     Route::post('/section/add', [PostSectionManagementController::class, 'store'])->name('section.store');
     Route::put('/section/{section}', [PostSectionManagementController::class, 'update'])->name('section.update');
@@ -87,6 +100,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/grade/{id}/update', [StudentGradeController::class, 'update'])->name('grade.update');
     Route::delete('/grade/{id}/delete', [StudentGradeController::class, 'destroy'])->name('grade.delete');
 
+    // for admin approval grade
+    Route::get('/admin/student/view/grade/{studentGradeId}', [StudentGradeController::class, 'viewGrades'])->name('admin.student.view.grade');
+    Route::put('/admin/student/approve/grade/{studentGradeId}', [StudentGradeController::class, 'approve'])->name('admin.student.approve.grade');
+    Route::put('/admin/student/reject/grade/{studentGradeId}', [StudentGradeController::class, 'reject'])->name('admin.student.reject.grade');
+
     // Faculty/Admin management routes
     Route::post('/admin/add', [AdminController::class, 'store'])->name('admin.store');
     Route::put('/admin/{admin}/update', [AdminController::class, 'update'])->name('admin.update');
@@ -102,13 +120,25 @@ Route::middleware('auth')->group(function () {
     Route::delete('/teacher/{teacher}', [TeacherController::class, 'destroy'])->name('teacher.destroy');
 
     // New route for showing student details
-    Route::get('/students/{id}/details', [PostStudentInfoController::class, 'show'])->name('students.showDetails');
+    Route::get('/students/{id}/details', [ViewStudentInfoController::class, 'index'])->name('students.showDetails');
 
-    // For student routes
-    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
-    Route::get('/student/view/schedule/', [StudentScheduleController::class, 'index'])->name('student.view.schedule');
+    // Printing a semi TOR
+    Route::get('/admin/preview/print/tor/{studentNo}', [PrintTORController::class, 'index'])->name('admin.preview.print.tor');
 
-    // For teacher dashboard and features
+    // Promote student
+    Route::put('/admin/student/promote/{studentNo}', [ViewStudentInfoController::class, 'promote'])->name('admin.student.promote');
+
+    // routes/web.php
+    Route::delete('/clear-flash', function() {
+        Session::forget(['success', 'error', 'message']);
+        return response()->noContent();
+    })->name('admin.clear-flash');
+});
+
+
+// Teacher Routes
+Route::middleware(['auth', IsTeacher::class])->group(function () {
+   // For teacher dashboard and features
     Route::get('/teacher/dashboard', [TeacherController::class, 'index'])->name('teacher.dashboard');
     Route::get('/teacher/class/schedule', [TeacherClassScheduleController::class, 'index'])->name('teacher.class.schedule');
     Route::get('/teacher/assigned/subjects', [TeacherAssignedSubjectsController::class, 'index'])->name('teacher.assigned.subjects');
@@ -119,6 +149,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/teacher/announcement', [TeacherAnnouncementController::class, 'store'])->name('teacher.announcement.store');
     Route::put('/teacher/announcement/{teacherAnnouncement}', [TeacherAnnouncementController::class, 'update'])->name('teacher.announcement.update');
     Route::delete('/teacher/announcement/{teacherAnnouncement}', [TeacherAnnouncementController::class, 'destroy'])->name('teacher.announcement.destroy');
+
+    // TeacherGradeManagement
+    Route::get('/teacher/grade/management', [TeacherGradeManagementController::class, 'index'])->name('teacher.grade.management');
+
+    Route::get('/teacher/grade/management/view/course/grade', [ViewCourseGradeController::class, 'index'])->name('teacher.grade.management.view.course.grade');
+    Route::post('/teacher/grade/management/add/{id}/course/grade', [ViewCourseGradeController::class, 'store'])->name('teacher.grade.management.add.course.grade');
+    Route::put('/teacher/grade/management/edit/{id}/course/grade', [ViewCourseGradeController::class, 'update'])->name('teacher.grade.management.edit.course.grade');
+    Route::delete('/teacher/grade/management/delete/{id}/course/grade', [ViewCourseGradeController::class, 'destroy'])->name('teacher.grade.management.delete.course.grade');
+});
+
+// Student Routes
+Route::middleware(['auth', IsStudent::class])->group(function () {
+    // For student routes
+    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
+    Route::get('/student/view/schedule/', [StudentScheduleController::class, 'index'])->name('student.view.schedule');
 });
 
 

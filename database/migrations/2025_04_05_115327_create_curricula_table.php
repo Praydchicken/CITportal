@@ -17,10 +17,10 @@ return new class extends Migration
             $table->foreignId('semester_id')->constrained()->onDelete('cascade');
             $table->string('course_code')->unique();
             $table->string('subject_name');
-            $table->string('description');
+            $table->string('description')->nullable();
             $table->string('lecture_units');
             $table->string('lab_units');
-            $table->integer('total_units');
+            $table->integer('units');
             $table->timestamps();
         });
     }
