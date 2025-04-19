@@ -38,6 +38,9 @@ const props = defineProps({
   }
 });
 
+console.log(props.schoolYears);
+
+
 const headerContent = computed(() => [
   {
     title: props.title || "Admin Portal",
@@ -47,20 +50,31 @@ const headerContent = computed(() => [
 ]);
 
 const searchQuery = ref('');
+const filterSchoolYear = ref('');
 
 // Add computed property for filtered admins
 const filteredAdmins = computed(() => {
-  if (!searchQuery.value) return props.teachers;
+  let filtered = props.teachers;
   
-  const query = searchQuery.value.toLowerCase();
-  return props.teachers.filter(admin => {
-    return (
-      admin.first_name?.toLowerCase().includes(query) ||
-      admin.last_name?.toLowerCase().includes(query) ||
-      admin.user?.email?.toLowerCase().includes(query) ||
-      admin.phone_number?.toLowerCase().includes(query)
-    );
-  });
+  // Apply school year filter
+  if (filterSchoolYear.value) {
+    filtered = filtered.filter(admin => admin.school_year_id == filterSchoolYear.value);
+  }
+  
+  // Apply search query filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(admin => {
+      return (
+        admin.first_name?.toLowerCase().includes(query) ||
+        admin.last_name?.toLowerCase().includes(query) ||
+        admin.user?.email?.toLowerCase().includes(query) ||
+        admin.phone_number?.toLowerCase().includes(query)
+      );
+    });
+  }
+  
+  return filtered;
 });
 
 const selectedFaculty = ref(null);
@@ -81,12 +95,12 @@ const tableHeaders = [
 const actionButtons = [
   {
     label: 'View',
-    class: 'bg-[#559de6] text-white px-3 py-1 rounded cursor-pointer mr-2',
+    class: 'bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded cursor-pointer mr-2',
     action: (faculty) => showFacultyPreview(faculty)
   },
   {
     label: 'Edit',
-    class: 'bg-[#4CAF50] text-white px-3 py-1 rounded cursor-pointer mr-2',
+    class: 'bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded cursor-pointer mr-2',
     action: (faculty) => {
       selectedFaculty.value = faculty;
       openModal(faculty);
@@ -94,7 +108,7 @@ const actionButtons = [
   },
   {
     label: 'Delete',
-    class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer',
+    class: 'bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded cursor-pointer',
     action: (faculty) => deleteFaculty(faculty)
   }
 ];
@@ -133,6 +147,11 @@ const showNotification = (message, type = 'success') => {
   }, 2500);
 };
 
+const activeSchoolYear = computed(() => {
+  return props.schoolYears?.find(status => status.school_year_status?.toLowerCase() === 'active');
+});
+const activeSchoolYearId = computed(() => activeSchoolYear.value?.id);
+
 const openModal = (faculty = null) => {
   if (faculty) {
     isEditMode.value = true;
@@ -142,10 +161,11 @@ const openModal = (faculty = null) => {
     form.phone_number = faculty.phone_number;
     form.address = faculty.address;
     form.email = faculty.user?.email || '';
-    form.school_year_id = faculty.school_year_id;
+    form.school_year_id = activeSchoolYearId.value;
   } else {
     isEditMode.value = false;
     form.reset();
+    form.school_year_id = activeSchoolYearId.value;
   }
   isModalOpen.value = true;
 };
@@ -543,13 +563,22 @@ const filteredFacultyLoads = computed(() => {
       </div>
 
       <!-- Search and Filter Section -->
-      <div class="mb-6 flex justify-start">
+      <div class="mb-6 flex justify-start gap-4">
         <input 
           v-model="searchQuery"
           type="text" 
           placeholder="Search faculty..." 
           class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]"
         >
+        <select 
+          v-model="filterSchoolYear"
+          class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]"
+        >
+          <option value="">All School Years</option>
+          <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+            {{ year.school_year }} {{ year.school_year_status === 'Active' ? '(Active)' : '' }}
+          </option>
+        </select>
       </div>
 
       <!-- Faculty Table -->
@@ -821,7 +850,8 @@ const filteredFacultyLoads = computed(() => {
           </p>
         </div>
 
-        <div>
+        <!-- School Year -->
+        <div v-if="isEditMode">
           <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
           <select 
             id="school_year"
@@ -838,6 +868,19 @@ const filteredFacultyLoads = computed(() => {
           <p v-if="form.errors.school_year_id" class="text-red-500 text-sm mt-1">
             {{ form.errors.school_year_id }}
           </p>
+        </div>
+
+         <div v-else>
+          <label for="school_year_status" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
+          <input 
+            type="text" 
+            id="school_year_status" 
+            :value="activeSchoolYear?.school_year || 'N/A'" 
+            class="input-field-add-student bg-gray-200 cursor-not-allowed" 
+            readonly 
+          />
+          <!-- Hidden input to actually submit the ID -->
+          <!-- <input type="hidden" name="student_status_id" v-model="form.student_status_id">  -->
         </div>
 
         <div>

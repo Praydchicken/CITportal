@@ -16,6 +16,7 @@ const adminLinks = [
   { name: "Dashboard", url: route('student.dashboard')},
   { name: "Profile Information", url: '#' },
   { name: "Schedule", url: route('student.schedule') },
+  { name: "Schedule", url: route('student.view.schedule') },
   { name: "Grade Report", url: '#' },
 ];
 

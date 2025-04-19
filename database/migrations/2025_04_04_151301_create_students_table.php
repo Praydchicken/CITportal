@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('first_name', 50);
             $table->string('middle_name', 50)->nullable();
             $table->string('last_name', 50);
-            $table->string('phone_number')->default('N/A');;
+            $table->string('phone_number')->nullable();
             $table->enum('gender', ['Male', 'Female', 'Others']);
             $table->text('address')->nullable();
             $table->date('enrollment_date');

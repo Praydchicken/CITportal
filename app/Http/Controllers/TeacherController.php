@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Models\UserType;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Auth;
+use App\Models\AdminAnnouncement;
+use App\Models\TeacherAnnouncement;
 
 class TeacherController extends Controller
 {
@@ -18,10 +22,106 @@ class TeacherController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {
-        //
-    }
+    {   
+        // Get authenticated user
+        $user = Auth::user();
 
+        // Get teacher record with relationships
+        $teacher = Teacher::where('user_id', $user->id)
+            ->with(['user', 'schoolYear', 'facultyLoads' => function($query) {
+                $query->with([
+                    'curriculum', 
+                    'section.students', 
+                    'yearLevel', 
+                    'schedule', 
+                    'semester',
+                   
+                ]);
+            }])
+            ->first();
+    
+        // get the grade student
+        $teacherStudentGrades = Teacher::where('user_id', $user->id)->with('studentGrades')->get();
+        // dd($teacherStudentGrades);
+
+        // Check if teacher exists
+        if (!$teacher) {
+            // Handle if teacher record does not exist
+            return redirect()->route('login'); // Or appropriate redirect
+        }
+
+        // Calculate statistics
+        $totalAssignedStudents = 0;
+        $totalAssignedSubjects = $teacher->facultyLoads->count();
+        $totalApprovedGrades = 0;
+        $totalPendingGrades = 0;
+        $totalRejectedGrades = 0;
+
+        // Get unique students and count grade statuses
+        $studentIds = [];
+        foreach ($teacher->facultyLoads as $load) {
+            // Count students in each section
+            if ($load->section && $load->section->students) {
+                foreach ($load->section->students as $student) {
+                    if (!in_array($student->id, $studentIds)) {
+                        $studentIds[] = $student->id;
+                        $totalAssignedStudents++;
+                    }
+                }
+            }
+
+            // Count grade statuses
+            foreach ($teacherStudentGrades as $teacher) {
+                foreach ($teacher->studentGrades as $grade) {
+                    switch ($grade->grade_status) {
+                        case 'Approved':
+                            $totalApprovedGrades++;
+                            break;
+                        case 'Pending':
+                            $totalPendingGrades++;
+                            break;
+                        case 'Rejected':
+                            $totalRejectedGrades++;
+                            break;
+                    }
+                }
+            }
+        }
+
+        // Get teacher's class schedule
+        $classSchedule = $teacher->facultyLoads->map(function($load) {
+            return [
+                'subject' => $load->curriculum->subject_name,
+                'course_code' => $load->curriculum->course_code,
+                'section' => $load->section->section,
+                'year_level' => $load->yearLevel->year_level,
+                'day' => $load->schedule->day,
+                'start_time' => $load->schedule->start_time,
+                'end_time' => $load->schedule->end_time,
+                'semester' => $load->semester->semester_name,
+            ];
+        });
+
+        return Inertia::render('TeacherDashboard/TeacherDashboard', [
+            'title' => 'Teacher Dashboard',
+            'auth' => [
+                'user' => [
+                    'name' => "{$teacher->first_name} {$teacher->last_name} | Teacher",
+                    'teacher' => $teacher
+                ]
+            ],
+            'welcomeMessage' => "Welcome back, {$teacher->first_name} {$teacher->last_name}!",
+            'classSchedule' => $classSchedule,
+            'statistics' => [
+                'totalAssignedStudents' => $totalAssignedStudents,
+                'totalAssignedSubjects' => $totalAssignedSubjects,
+                'totalApprovedGrades' => $totalApprovedGrades,
+                'totalPendingGrades' => $totalPendingGrades,
+                'totalRejectedGrades' => $totalRejectedGrades,
+            ],
+            'debug' => [] // If you want to enable debugging in the future
+        ]);
+    }
     /**
      * Show the form for creating a new resource.
      */

@@ -19,7 +19,8 @@ class FacultyLoad extends Model
         'section_id',
         'year_level_id',
         'class_schedule_id',
-        'semester_id'
+        'semester_id',
+        'school_year_id',
     ];
 
     // public function admin(): BelongsTo
@@ -32,6 +33,10 @@ class FacultyLoad extends Model
         return $this->belongsTo(Teacher::class);
     }
 
+    public function schoolYear(): BelongsTo
+    {
+        return $this->belongsTo(SchoolYear::class);
+    }
 
     public function curriculum(): BelongsTo
     {

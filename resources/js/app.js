@@ -38,3 +38,13 @@ createInertiaApp({
 
   },
 })
+// Clear flash messages on page load if they exist
+window.addEventListener('beforeunload', () => {
+  if (page.props.flash?.success || page.props.flash?.error) {
+    Inertia.delete(route('admin.clear-flash'), {
+      preserveScroll: true,
+      preserveState: true,
+    });
+  }
+});
+

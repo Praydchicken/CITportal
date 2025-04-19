@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreignId('year_level_id')->constrained()->onDelete('cascade');
             $table->foreignId('class_schedule_id')->constrained()->onDelete('cascade');
             $table->foreignId('semester_id')->constrained()->onDelete('cascade');
+            $table->foreignId('school_year_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

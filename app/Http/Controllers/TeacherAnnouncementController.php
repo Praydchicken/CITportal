@@ -2,22 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AdminAnnouncement;
-use App\Http\Requests\StoreAdminAnnouncementRequest;
-use App\Http\Requests\UpdateAdminAnnouncementRequest;
+use App\Models\TeacherAnnouncement;
+use App\Http\Requests\StoreTeacherAnnouncementRequest;
+use App\Http\Requests\UpdateTeacherAnnouncementRequest;
 use Inertia\Inertia;
 use App\Models\YearLevel;
 use App\Models\Section;
+use App\Models\Teacher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
-class AdminAnnouncementController extends Controller
+class TeacherAnnouncementController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
+        $user = Auth::user();
+        $teacher = Teacher::where('user_id', $user->id)->firstOrFail();
         $yearLevels = YearLevel::all(['id', 'year_level']);
         
         $sections = Section::with('yearLevel')
@@ -33,7 +37,7 @@ class AdminAnnouncementController extends Controller
                 ];
             });
 
-        $announcements = AdminAnnouncement::with(['yearLevels', 'sections'])
+        $announcements = TeacherAnnouncement::with(['yearLevels', 'sections'])
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($announcement) {
@@ -48,15 +52,21 @@ class AdminAnnouncementController extends Controller
                 ];
             });
 
-        return Inertia::render('AdminDashboard/AdminAnnouncement', [
-            'title' => 'Admin Announcement',
+        return Inertia::render('TeacherDashboard/TeacherAnnouncement', [
+            'title' => 'Teacher Announcement',
             'sections' => $sections,
             'yearLevels' => $yearLevels,
             'announcements' => $announcements,
             'flash' => [
                 'success' => session('success'),
                 'error' => session('error')
-            ]
+            ],
+             'auth' => [
+                    'user' => [
+                        'name' => "{$teacher->first_name} {$teacher->last_name} | Teacher",
+                        'teacher' => $teacher
+                    ]
+                ],
         ]);
     }
 
@@ -85,7 +95,7 @@ class AdminAnnouncementController extends Controller
             DB::beginTransaction();
 
             // Create the announcement
-            $announcement = AdminAnnouncement::create([
+            $announcement = TeacherAnnouncement::create([
                 'title_announcement' => $request->title_announcement,
                 'description_announcement' => $request->description_announcement,
                 'deadline_announcement' => $request->deadline_announcement,
@@ -99,7 +109,7 @@ class AdminAnnouncementController extends Controller
                 // Insert all year levels
                 foreach ($yearLevels as $yearLevel) {
                     DB::table('announcement_year_levels')->insert([
-                        'admin_announcements_id' => $announcement->id,
+                        'teacher_announcements_id' => $announcement->id,
                         'year_level_id' => $yearLevel->id,
                         'created_at' => now(),
                         'updated_at' => now()
@@ -110,7 +120,7 @@ class AdminAnnouncementController extends Controller
                         $sections = Section::where('year_level_id', $yearLevel->id)->get();
                         foreach ($sections as $section) {
                             DB::table('announcement_sections')->insert([
-                                'admin_announcements_id' => $announcement->id,
+                                'teacher_announcements_id' => $announcement->id,
                                 'section_id' => $section->id,
                                 'created_at' => now(),
                                 'updated_at' => now()
@@ -124,7 +134,7 @@ class AdminAnnouncementController extends Controller
 
                 // Insert into announcement_year_levels table
                 DB::table('announcement_year_levels')->insert([
-                    'admin_announcements_id' => $announcement->id,
+                    'teacher_announcements_id' => $announcement->id,
                     'year_level_id' => $yearLevel->id,
                     'created_at' => now(),
                     'updated_at' => now()
@@ -148,7 +158,7 @@ class AdminAnnouncementController extends Controller
                 // Insert into announcement_sections table
                 foreach ($sections as $section) {
                     DB::table('announcement_sections')->insert([
-                        'admin_announcements_id' => $announcement->id,
+                        'teacher_announcements_id' => $announcement->id,
                         'section_id' => $section->id,
                         'created_at' => now(),
                         'updated_at' => now()
@@ -168,7 +178,7 @@ class AdminAnnouncementController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(AdminAnnouncement $adminAnnouncement)
+    public function show(TeacherAnnouncement $TeacherAnnouncement)
     {
         //
     }
@@ -176,7 +186,7 @@ class AdminAnnouncementController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(AdminAnnouncement $adminAnnouncement)
+    public function edit(TeacherAnnouncement $TeacherAnnouncement)
     {
         //
     }
@@ -184,7 +194,7 @@ class AdminAnnouncementController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, AdminAnnouncement $adminAnnouncement)
+    public function update(Request $request, TeacherAnnouncement $teacherAnnouncement)
     {
         $request->validate([
             'title_announcement' => 'required|string|max:255',
@@ -198,15 +208,15 @@ class AdminAnnouncementController extends Controller
             DB::beginTransaction();
 
             // Update the announcement
-            $adminAnnouncement->update([
+            $teacherAnnouncement->update([
                 'title_announcement' => $request->title_announcement,
                 'description_announcement' => $request->description_announcement,
                 'deadline_announcement' => $request->deadline_announcement
             ]);
 
             // Delete existing relationships
-            DB::table('announcement_year_levels')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
-            DB::table('announcement_sections')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
+            DB::table('announcement_year_levels')->where('teacher_announcements_id', $teacherAnnouncement->id)->delete();
+            DB::table('announcement_sections')->where('teacher_announcements_id', $teacherAnnouncement->id)->delete();
 
             if ($request->year_level_id === 'all') {
                 // Get all year levels
@@ -215,7 +225,7 @@ class AdminAnnouncementController extends Controller
                 // Insert all year levels
                 foreach ($yearLevels as $yearLevel) {
                     DB::table('announcement_year_levels')->insert([
-                        'admin_announcements_id' => $adminAnnouncement->id,
+                        'teacher_announcements_id' => $teacherAnnouncement->id,
                         'year_level_id' => $yearLevel->id,
                         'created_at' => now(),
                         'updated_at' => now()
@@ -226,7 +236,7 @@ class AdminAnnouncementController extends Controller
                         $sections = Section::where('year_level_id', $yearLevel->id)->get();
                         foreach ($sections as $section) {
                             DB::table('announcement_sections')->insert([
-                                'admin_announcements_id' => $adminAnnouncement->id,
+                                'teacher_announcements_id' => $teacherAnnouncement->id,
                                 'section_id' => $section->id,
                                 'created_at' => now(),
                                 'updated_at' => now()
@@ -240,7 +250,7 @@ class AdminAnnouncementController extends Controller
 
                 // Insert into announcement_year_levels table
                 DB::table('announcement_year_levels')->insert([
-                    'admin_announcements_id' => $adminAnnouncement->id,
+                    'teacher_announcements_id' => $teacherAnnouncement->id,
                     'year_level_id' => $yearLevel->id,
                     'created_at' => now(),
                     'updated_at' => now()
@@ -264,7 +274,7 @@ class AdminAnnouncementController extends Controller
                 // Insert into announcement_sections table
                 foreach ($sections as $section) {
                     DB::table('announcement_sections')->insert([
-                        'admin_announcements_id' => $adminAnnouncement->id,
+                        'teacher_announcements_id' => $teacherAnnouncement->id,
                         'section_id' => $section->id,
                         'created_at' => now(),
                         'updated_at' => now()
@@ -284,17 +294,17 @@ class AdminAnnouncementController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(AdminAnnouncement $adminAnnouncement)
+    public function destroy(TeacherAnnouncement $teacherAnnouncement)
     {
         try {
             DB::beginTransaction();
 
             // Delete related records from pivot tables first
-            DB::table('announcement_year_levels')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
-            DB::table('announcement_sections')->where('admin_announcements_id', $adminAnnouncement->id)->delete();
+            DB::table('announcement_year_levels')->where('teacher_announcements_id', $teacherAnnouncement->id)->delete();
+            DB::table('announcement_sections')->where('teacher_announcements_id', $teacherAnnouncement->id)->delete();
 
             // Delete the announcement
-            $adminAnnouncement->delete();
+            $teacherAnnouncement->delete();
 
             DB::commit();
             return redirect()->back()->with('success', 'Announcement deleted successfully');
