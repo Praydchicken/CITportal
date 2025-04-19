@@ -10,7 +10,12 @@ return new class extends Migration
     {
         Schema::create('student_financials', function (Blueprint $table) {
             $table->id();
-            $table->string('student_id');
+            $table->string('student_number', 50);
+            $table->foreign('student_number')
+            ->references('student_number')
+            ->on('students')
+            ->onDelete('cascade');
+
             $table->string('school_year');
             $table->string('semester');
             $table->decimal('tuition_fee', 10, 2);
