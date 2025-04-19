@@ -8,6 +8,7 @@ use Inertia\Inertia;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Curriculum;
+use App\Models\FacultyLoad;
 use App\Models\Section;
 use App\Models\StudentGrade;
 use Illuminate\Support\Facades\DB;
@@ -100,14 +101,17 @@ class ViewStudentInfoController extends Controller
     public function promote($studentNo)
     {
         try {
+            // Getting the student with section table, year level table, and status table where it match the student_number column name to the $StudentNo value;
             $student = Student::with(['section', 'yearLevel', 'status'])
                         ->where('student_number', $studentNo)
                         ->firstOrFail();
-            
+
+            // Getting the curriculum where it match the year level id to the $student->year_level_id and count the result of it
             $curriculumCount = Curriculum::where('year_level_id', $student->year_level_id)
                                 ->where('semester_id', $student->semester_id)
                                 ->count();
 
+            // Count the grade that satistifed the where method
             $passedCount = StudentGrade::where('student_id', $student->id)
                                 ->where('year_level_id', $student->year_level_id)
                                 ->where('semester_id', $student->semester_id)
@@ -115,25 +119,28 @@ class ViewStudentInfoController extends Controller
                                 ->where('grade_remarks', 'PASSED')
                                 ->count();
 
-            // Check if student has completed all requirements for graduation
+            // check if the graduating student is 4th yeat and currently in the second semester
             $isGraduating = ($student->year_level_id == 4 && $student->semester_id == 2);
-            
+        
+            // check if the isGraduating is true and passedcount is equal to the count of curriculum then if its true updaye the student status into graduated
             if ($isGraduating && $passedCount === $curriculumCount) {
-                // Update student status to Graduated (ID 2)
                 $student->update([
                     'student_status_id' => 2 // Graduated
                 ]);
 
+                // 2. Remove student loads (since they are no longer enrolled in subjects)
+                DB::table('student_loads')->where('student_id', $student->id)->delete();
+                
                 return back()->with([
                     'flash' => [
                         'success' => 'Student has successfully graduated!',
-                        'data' => [
-                            'new_status' => 'Graduated'
-                        ]
+                        'data' => ['new_status' => 'Graduated']
                     ]
                 ]);
             }
 
+            // Prevent the student for promotion
+            // passedCount = 8 and the curriculumCount = 9 meaning it is true because 8 is not equal to 9. Meaning the student did not passed all the subjects
             if ($curriculumCount === 0 || $passedCount !== $curriculumCount) {
                 return back()->with([
                     'flash' => [
@@ -146,8 +153,9 @@ class ViewStudentInfoController extends Controller
             $promotionType = request('promotion_type');
             $currentYearLevel = $student->year_level_id;
             $currentSemester = $student->semester_id;
-            
+
             if ($promotionType === 'year') {
+                // checking if the student finished the 2nd semester of the year level
                 if ($currentSemester !== 2) {
                     return back()->with([
                         'flash' => [
@@ -168,43 +176,78 @@ class ViewStudentInfoController extends Controller
                         ]
                     ]);
                 }
-                
+
                 $newYearLevel = $currentYearLevel;
                 $newSemester = $currentSemester + 1;
             }
 
-            // Generate new section code
-            $newSectionCode = $this->generateNewSectionCode(
-                $student->section->section,
-                $currentYearLevel,
-                $currentSemester,
-                $newYearLevel,
-                $newSemester
-            );
+            // Getting the section name from the students current section
+            $section = $student->section->section;
 
-            // Find or create the new section
-            $newSection = Section::firstOrCreate(
-                [
-                    'year_level_id' => $newYearLevel,
-                    'semester_id' => $newSemester,
-                    'section' => $newSectionCode
-                ],
-                [
-                    'section_description' => 'Year ' . $newYearLevel . ' Semester ' . $newSemester . ' - ' . $newSectionCode
-                ]
-            );
+            // Takes the last character of the section string and make sure it is a Upper case letter
+            // 101 a = gets the "a" because it is the last character and with strtoupper convert the "a" to "A"
+            $sectionLetter = strtoupper(substr($section, -1));
 
-            // Update student record
+            // Checks if the last character is a letter, if not character the default is 'A'
+            if (!ctype_alpha($sectionLetter)) {
+                $sectionLetter = 'A';
+            }
+
+            $newSectionCode = ($newYearLevel * 100 + $newSemester) . $sectionLetter;
+
+            $schoolYearId = $student->section->school_year_id;
+
+            $newSection = Section::where([
+                'year_level_id' => $newYearLevel,
+                'semester_id' => $newSemester,
+                'section' => $newSectionCode,
+                'school_year_id' => $schoolYearId
+            ])->first();
+
+            // dd($newSection);
+
+            if (!$newSection) {
+                return back()->with([
+                    'flash' => [
+                        'error' => "Section {$newSectionCode} not found.",
+                        'success' => false
+                    ]
+                ]);
+            }
+
             $student->update([
                 'year_level_id' => $newYearLevel,
                 'semester_id' => $newSemester,
                 'section_id' => $newSection->id,
-                'student_status_id' => 1 // Ensure status remains Enrolled if not graduating
+                'student_status_id' => 1
             ]);
+
+            // Remove old student loads (from previous section/semester)
+            DB::table('student_loads')
+                ->where('student_id', $student->id)
+                ->delete();
+
+            // ✅ Assign new faculty loads based on new section
+            $facultyLoadsToAssign = FacultyLoad::where('section_id', $newSection->id)->pluck('id');
+
+            $newStudentLoadData = [];
+            foreach ($facultyLoadsToAssign as $facultyLoadId) {
+                $newStudentLoadData[] = [
+                    'student_id' => $student->id,
+                    'faculty_load_id' => $facultyLoadId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+
+            // Bulk insert the new loads
+            if (!empty($newStudentLoadData)) {
+                DB::table('student_loads')->insert($newStudentLoadData);
+            }
 
             return back()->with([
                 'flash' => [
-                    'success' => 'Student promoted successfully',
+                    'success' => 'Student promoted successfully!',
                     'data' => [
                         'new_year_level' => $newYearLevel,
                         'new_semester' => $newSemester,
@@ -214,33 +257,13 @@ class ViewStudentInfoController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            dd($e->getMessage());
             return back()->with([
                 'flash' => [
                     'error' => 'Promotion failed: ' . $e->getMessage(),
                     'success' => false
                 ]
             ]);
-        }
-    }
-
-    protected function generateNewSectionCode($currentSection, $currentYearLevel, $currentSemester, $newYearLevel, $newSemester)
-    {
-        // Extract the base section name (e.g., "101 A" → "A")
-        $sectionParts = explode(' ', $currentSection);
-        $sectionLetter = end($sectionParts);
-        
-        // Handle cases where section might not follow standard format
-        if (!ctype_alpha($sectionLetter)) {
-            $sectionLetter = 'A'; // Default to 'A' if no letter found
-        }
-
-        // Generate new section code based on promotion type
-        if ($newYearLevel > $currentYearLevel) {
-            // Year promotion (e.g., "101 A" → "201 A")
-            return $newYearLevel . '01 ' . $sectionLetter;
-        } else {
-            // Semester promotion (e.g., "101 A" → "102 A")
-            return $currentYearLevel . '0' . $newSemester . ' ' . $sectionLetter;
         }
     }
 }

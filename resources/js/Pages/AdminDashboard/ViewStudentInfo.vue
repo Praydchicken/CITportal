@@ -157,29 +157,45 @@ const promoteStudent = (studentNo, promotionType) => {
                         <span v-if="curriculumGroup.is_current" class="text-sm text-green-600 ml-2">(Current Semester)</span>
                     </h1>
                     
-                    <!-- Show promote button only for current semester -->
                    <!-- Promotion Buttons Section -->
                     <div v-if="curriculumGroup.is_current" class="flex gap-x-3">
-                    <!-- Next Semester Button (shows only if NOT in 2nd semester) -->
-                    <button 
-                        v-if="!props.studentInfo.semester.includes('2nd') && 
-                            !props.studentInfo.semester.includes('Second')"
-                        @click="promoteStudent(props.studentInfo.student_no, 'semester')" 
-                        class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-                    >
-                        Promote to Next Semester
-                    </button>
+                      <!-- Next Semester Button (shows only if NOT in 2nd semester) -->
+                      <button 
+                          v-if="!props.studentInfo.semester.includes('2nd') && 
+                              !props.studentInfo.semester.includes('Second')"
+                          @click="promoteStudent(props.studentInfo.student_no, 'semester')" 
+                          class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                      >
+                          Promote to Next Semester
+                      </button>
 
-                    <!-- Next Year Level Button (shows only in 2nd semester) -->
-                    <button 
+                      <!-- Next Year Level Button (shows only in 2nd semester) -->
+                      <button 
+                          v-if="(props.studentInfo.semester.includes('2nd') || 
+                              props.studentInfo.semester.includes('Second')) &&
+                              !props.studentInfo.is_final_semester"
+                          @click="promoteStudent(props.studentInfo.student_no, 'year')" 
+                          class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                      >
+                          Promote to Next Year Level
+                      </button>
+
+                        <!-- Button for graduation students shows only for 4th yr 2nd semester-->
+                        <button 
                         v-if="(props.studentInfo.semester.includes('2nd') || 
-                            props.studentInfo.semester.includes('Second')) &&
-                            !props.studentInfo.is_final_semester"
+                                props.studentInfo.semester.includes('Second')) &&
+                                props.studentInfo.year_level.includes('4th')"
                         @click="promoteStudent(props.studentInfo.student_no, 'year')" 
-                        class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                    >
-                        Promote to Next Year Level
-                    </button>
+                        :class="[
+                          'px-3 py-1 rounded',
+                          props.studentInfo.status === 'Graduated' 
+                            ? 'bg-gray-400 text-white cursor-not-allowed' 
+                            : 'bg-blue-500 hover:bg-blue-600 text-white cursor-pointer'
+                        ]"
+                        :disabled="props.studentInfo.status === 'Graduated'"
+                      >
+                        Promote as Graduated
+                      </button>
                     </div>
                 </div>
 

@@ -241,7 +241,7 @@ class StudentGradeController extends Controller
             $studentGrade->grade_status = 'APPROVED';
             $studentGrade->save();
 
-            return back()->with('success', 'Student grade approved successfully.');
+            return redirect()->route('admin.student.grade')->with('success', 'Student grade approved successfully.');
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error updating grade: ' . $e->getMessage());
@@ -255,7 +255,7 @@ class StudentGradeController extends Controller
             $studentGrade->grade_status = 'REJECTED';
             $studentGrade->save();
 
-            return back()->with('success', 'Student grade rejected successfully.');
+            return redirect()->route('admin.student.grade')->with('success', 'Student grade rejected successfully.');
         } catch (\Exception $e) {
             return back()->with('error', 'Error rejecting grade: ' . $e->getMessage());
         }
