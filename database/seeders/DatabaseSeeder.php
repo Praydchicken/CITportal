@@ -2,7 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Curriculum;
+use App\Models\StudentStatus;
 use App\Models\User;
+use App\Models\YearLevel;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash; // Import Hash facade
@@ -14,12 +17,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'user_type_id' => 1, // Admin
-            'email' => 'admin@gmail.com',
-            'password' => Hash::make('password123'),
+        $this->call([
+            UserTypeSeeder::class,
+            UserSeeder::class,
+            AdminSeeder::class,
+            YearLevelSeeder::class,
+            SemesterSeeder::class,
+            SchoolYearSeeder::class,
+            StudentStatusSeeder::class,
+            CurriculumSeeder::class,
+            SectionSeeder::class,
+            // Add other seeders here
         ]);
+
     }
 }
