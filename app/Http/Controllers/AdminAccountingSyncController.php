@@ -42,7 +42,7 @@ class AdminAccountingSyncController extends Controller
                     if ($recordSemesterIndex <= $currentSemesterIndex) {
                         FinancialRecord::updateOrCreate(
                             [
-                                'student_id' => $studentNumber,
+                                'student_number' => $studentNumber,
                                 'school_year' => $record['school_year'],
                                 'semester' => $record['semester'],
                             ],
