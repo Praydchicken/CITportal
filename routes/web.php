@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\AdminAccountingSyncController;
-use App\Http\Controllers\AdminAnnouncementController;
 use App\Http\Controllers\TeacherAnnouncementController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
@@ -17,10 +16,8 @@ use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
 use App\Http\Controllers\StudentScheduleController;
-use App\Models\AdminAnnouncement;
-use App\Models\FacultyLoad;
 use App\Http\Controllers\PrintTORController;
-use App\Http\Controllers\StudentScheduleController;
+use App\Http\Controllers\StudentBalanceController;
 use App\Http\Controllers\TeacherAssignedStudentsController;
 use App\Http\Controllers\TeacherAssignedSubjectsController;
 use App\Http\Controllers\TeacherClassScheduleController;
@@ -35,6 +32,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Session;
+
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -70,7 +68,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', IsAdmin::class])->group(function () {
      // For admin routes
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
-    Route::get('/admin/student/info', [PostStudentInfoController::class,'index'])->name('student.info');
+    Route::get('/admin/student/info', [PostStudentInfoController::class,'index'])->name('admin.student.info');
 
     // For admin school year settings
     Route::get('/admin/school/year', [SchoolYearController::class,'index'])->name('admin.school.year');
@@ -127,11 +125,6 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::put('/admin/{admin}/update', [AdminController::class, 'update'])->name('admin.update');
     Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('admin.destroy');
 
-    // For student routes
-    Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
-    Route::get('/student/schedule', [StudentScheduleController::class, 'index'])->name('student.schedule');
-
-
     // For admin classroom settings
     Route::get('/admin/classroom', [ClassRoomController::class,'index'])->name('admin.classroom');
     Route::post('/admin/classroom', [ClassRoomController::class,'store'])->name('admin.classroom.store');
@@ -142,8 +135,8 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::delete('/teacher/{teacher}', [TeacherController::class, 'destroy'])->name('teacher.destroy');
 
 
-    Route::post('/admin/sync-financial-records', [AdminAccountingSyncController::class, 'syncFinancialDataFromAPI']);
-    // New route for showing student details
+    Route::post('/admin/sync-financial-records', [AdminAccountingSyncController::class, 'syncFinancialDataFromAPI'])->name('admin.sync.financial-records');
+
     Route::get('/admin/student-financial-records', function () {
         return Inertia::render('AdminDashboard/AdminAccountingSync');
     })->name('admin.accountingSync');
@@ -192,7 +185,9 @@ Route::middleware(['auth', IsTeacher::class])->group(function () {
 Route::middleware(['auth', IsStudent::class])->group(function () {
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
-    Route::get('/student/view/schedule/', [StudentScheduleController::class, 'index'])->name('student.view.schedule');
+    Route::get('/student/schedule', [StudentScheduleController::class, 'index'])->name('student.schedule');
+    Route::get('/student/balances', [StudentBalanceController::class, 'index'])->name('student.balances');
+
 });
 
 
