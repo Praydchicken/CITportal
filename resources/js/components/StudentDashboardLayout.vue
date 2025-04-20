@@ -4,6 +4,7 @@ import DashboardHeader from '../Components/DashboardHeader.vue';
 
 import { usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { route } from 'ziggy-js';
 
 defineProps({
   title: String
@@ -13,11 +14,12 @@ defineProps({
 const page = usePage();
 
 const adminLinks = [
-  { name: "Dashboard", url: route('student.dashboard')},
-  { name: "Profile Information", url: '#' },
+  // { name: "Dashboard", url: route('student.dashboard')},
+  { name: "Profile Information", url: route('student.profile') },
   { name: "Schedule", url: route('student.schedule') },
-  { name:"View Balance", url: route('student.balances') }
-  // { name: "Grade Report", url: '#' },
+  // { name:"View Balance", url: route('student.balances') }
+  { name: "Grade Report", url: route('student.grade.view') },
+  { name: "View Announcement", url: route('student.announcement.view') }
 ];
 
 const headerContent = computed(() => [

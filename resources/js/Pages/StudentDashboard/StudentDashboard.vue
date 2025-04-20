@@ -31,8 +31,8 @@ console.log(props);
         <div v-if="announcements.length === 0" class="bg-gray-50 p-4 rounded-lg">
           <p class="text-gray-600">No announcements at this time.</p>
         </div>
-        <div v-for="announcement in announcements" :key="announcement.id" 
-             class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+        <div v-for="announcement in announcements" :key="announcement.id"
+          class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
           <h3 class="text-xl font-semibold text-[#1a3047] mb-2">{{ announcement.title_announcement }}</h3>
           <p class="text-gray-600 mb-4">{{ announcement.description_announcement }}</p>
           <div class="text-sm text-gray-500">
@@ -62,8 +62,7 @@ console.log(props);
                 No class schedule available.
               </td>
             </tr>
-            <tr v-for="(schedule, index) in classSchedule" :key="index" 
-                class="hover:bg-gray-50">
+            <tr v-for="(schedule, index) in classSchedule" :key="index" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">{{ schedule.subject }}</td>
               <td class="px-6 py-4 whitespace-nowrap">{{ schedule.faculty }}</td>
               <td class="px-6 py-4 whitespace-nowrap">{{ schedule.day }}</td>
@@ -78,3 +77,36 @@ console.log(props);
     </div>
   </div>
 </template>
+
+<style scoped>
+.schedule-container {
+  overflow-y: auto;
+  /* Enable vertical scrolling */
+  max-height: 100%;
+}
+
+.schedule-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.schedule-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.schedule-container::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+@media (max-width: 768px) {
+  .schedule-container {
+    width: 100%;
+  }
+}
+</style>

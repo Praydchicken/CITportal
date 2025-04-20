@@ -98,6 +98,7 @@ const totalBalance = computed(() =>
 
 
 <template>
+
 	<Head title="Accounting API" />
 	<div class="w-full bg-gray-100 rounded-lg p-6 mb-8 border border-gray-300 space-y-4">
 		<div class="flex justify-between items-center">

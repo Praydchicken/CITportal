@@ -15,9 +15,12 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\ForStudentGradeViewController;
 use App\Http\Controllers\StudentScheduleController;
 use App\Http\Controllers\PrintTORController;
+use App\Http\Controllers\StudentAnnouncementViewController;
 use App\Http\Controllers\StudentBalanceController;
+use App\Http\Controllers\StudentProfileController;
 use App\Http\Controllers\TeacherAssignedStudentsController;
 use App\Http\Controllers\TeacherAssignedSubjectsController;
 use App\Http\Controllers\TeacherClassScheduleController;
@@ -186,8 +189,11 @@ Route::middleware(['auth', IsStudent::class])->group(function () {
     // For student routes
     Route::get('/student/dashboard', [StudentController::class, 'index'])->name('student.dashboard');
     Route::get('/student/schedule', [StudentScheduleController::class, 'index'])->name('student.schedule');
-    Route::get('/student/balances', [StudentBalanceController::class, 'index'])->name('student.balances');
+    Route::get('/student/profile', [StudentProfileController::class, 'index'])->name('student.profile');
+    Route::get('/student/view/grade', [ForStudentGradeViewController::class, 'index'])->name('student.grade.view');
 
+    Route::get('/for/student/view/grade', [StudentAnnouncementViewController::class, 'index'])->name('student.announcement.view');
+    
 });
 
 

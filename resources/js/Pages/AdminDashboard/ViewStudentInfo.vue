@@ -20,7 +20,7 @@ const props = defineProps({
 const studentCurriculum = props.studentInfo.curriculum;
 const studentNo = props.studentInfo.student_no;
 
-console.log(props.studentInfo);
+// console.log(props.studentInfo);
 
 // In your main layout component or app.js
 watch(() => page.props.flash, (newVal) => {
