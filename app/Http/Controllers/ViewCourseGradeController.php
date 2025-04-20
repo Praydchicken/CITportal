@@ -183,7 +183,7 @@ class ViewCourseGradeController extends Controller
 
     public function update(Request $request, $studentId)
     {
-        // dd($request->all());
+        dd($request->all());
 
         // Validate the request
        $request->validate([

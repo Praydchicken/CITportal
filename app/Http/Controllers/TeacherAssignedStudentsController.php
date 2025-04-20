@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Auth;
 
 class TeacherAssignedStudentsController extends Controller
 {
-   public function index()
+    public function index()
     {
         $user = Auth::user();
 

@@ -39,6 +39,8 @@ class TeacherController extends Controller
                 ]);
             }])
             ->first();
+        
+        // dd($teacher);
     
         // get the grade student
         $teacherStudentGrades = Teacher::where('user_id', $user->id)->with('studentGrades')->get();
@@ -58,35 +60,40 @@ class TeacherController extends Controller
         $totalRejectedGrades = 0;
 
         // Get unique students and count grade statuses
+        $totalAssignedStudents = 0;
         $studentIds = [];
         foreach ($teacher->facultyLoads as $load) {
-            // Count students in each section
-            if ($load->section && $load->section->students) {
-                foreach ($load->section->students as $student) {
-                    if (!in_array($student->id, $studentIds)) {
-                        $studentIds[] = $student->id;
-                        $totalAssignedStudents++;
-                    }
-                }
-            }
+            foreach ($load->studentLoads as $studentLoad) {
+                $student = $studentLoad->student;
 
-            // Count grade statuses
-            foreach ($teacherStudentGrades as $teacher) {
-                foreach ($teacher->studentGrades as $grade) {
-                    switch ($grade->grade_status) {
-                        case 'Approved':
-                            $totalApprovedGrades++;
-                            break;
-                        case 'Pending':
-                            $totalPendingGrades++;
-                            break;
-                        case 'Rejected':
-                            $totalRejectedGrades++;
-                            break;
-                    }
+                // Skip if student is graduated (optional)
+                if ($student->student_status_id == 2) continue;
+
+                // Avoid double counting
+                if (!in_array($student->id, $studentIds)) {
+                    $studentIds[] = $student->id;
+                    $totalAssignedStudents++;
                 }
             }
         }
+
+        // Count grade statuses
+        foreach ($teacherStudentGrades as $teacher) {
+            foreach ($teacher->studentGrades as $grade) {
+                switch ($grade->grade_status) {
+                    case 'Approved':
+                        $totalApprovedGrades++;
+                        break;
+                    case 'Pending':
+                        $totalPendingGrades++;
+                        break;
+                    case 'Rejected':
+                        $totalRejectedGrades++;
+                        break;
+                }
+            }
+        }
+        // dd($studentIds);
 
         // Get teacher's class schedule
         $classSchedule = $teacher->facultyLoads->map(function($load) {
