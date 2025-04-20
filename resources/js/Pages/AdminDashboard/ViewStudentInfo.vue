@@ -104,7 +104,7 @@ const promoteStudent = (studentNo, promotionType) => {
         />
         </Teleport>
     
-        <h1 class="mb-10">View Student Information</h1>
+
         <div class="w-[100%] h-[40vh] flex gap-x-4">
             <!-- Initial profile picture -->
             <div class="card w-[40%] h-auto flex flex-col items-center justify-center gap-y-4 p-10">
@@ -123,7 +123,7 @@ const promoteStudent = (studentNo, promotionType) => {
                 <!-- Full Name -->
                 <div class="flex border-b border-gray-300 mb-3 p-4">
                     <span class="w-40 font-bold">Full Name</span>
-                    <p class="flex-1">{{ props.studentInfo.first_name }} {{ props.studentInfo.last_name }}</p>
+                    <p class="flex-1">{{ props.studentInfo.first_name }} {{ props.studentInfo.middle_name }} {{ props.studentInfo.last_name }}</p>
                 </div>
 
                 <!-- Email -->
@@ -183,7 +183,7 @@ const promoteStudent = (studentNo, promotionType) => {
                     </div>
                 </div>
 
-                <table class="min-w-full divide-y divide-gray-200 mb-8">
+                <table class="w-full divide-y divide-gray-200 mb-8 shadow-2xl">
                     <thead>
                         <tr class="bg-[#1a3047] text-white">
                             <th v-for="header in tableHeaders" :key="header.key" 
@@ -194,7 +194,7 @@ const promoteStudent = (studentNo, promotionType) => {
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-for="(subject, subIndex) in curriculumGroup.subjects" :key="subject.curriculum_id"
-                            :class="subIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
+                            :class="subIndex % 2 === 0 ? 'bg-zinc-200' : 'bg-white'">
                             <td class="px-6 py-4 text-sm text-gray-900">{{ subject.course_code }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900">{{ subject.subject_name }}</td>
                             <td class="px-6 py-4 text-sm text-gray-900">{{ subject.lecture_units }}</td>
