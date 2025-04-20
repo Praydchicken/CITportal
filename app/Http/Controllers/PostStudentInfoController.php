@@ -18,8 +18,10 @@ use Illuminate\Support\Facades\Log;
 
 class PostStudentInfoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->firstOrFail();
+
         $students = Student::with([
             'section',
             'yearLevel',
@@ -27,11 +29,27 @@ class PostStudentInfoController extends Controller
             'status',
             'schoolYear',
             'semester'
-        ])->latest()->get();
+        ])
+        ->where('school_year_id', $activeSchoolYear->id)
+        ->when($request->search, function ($query, $search) {
+            return $query->where('student_number', 'like', '%' . $search . '%');
+        })
+        ->when($request->year_level, function ($query, $yearLevel) {
+            return $query->where('year_level_id', $yearLevel);
+        })
+        ->when($request->semester, function ($query, $semester) {
+            return $query->where('semester_id', $semester);
+        })
+        ->when($request->section, function ($query, $section) {
+            return $query->where('section_id', $section);
+        })
+        ->latest()
+        ->paginate(10)
+        ->withQueryString();
+
         $sections = Section::all();
         $yearLevels = YearLevel::all();
         $studentStatuses = StudentStatus::all();
-        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
         $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
         $semesters = Semester::all();
 
@@ -43,10 +61,10 @@ class PostStudentInfoController extends Controller
             'studentStatuses' => $studentStatuses,
             'activeSchoolYear' => $activeSchoolYear,
             'schoolYears' => $schoolYears,
-            'semesters' => $semesters
+            'semesters' => $semesters,
+            'filters' => $request->only(['search', 'year_level', 'semester']),
         ]);
     }
-
     public function store(Request $request)
     {
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
@@ -233,8 +251,6 @@ class PostStudentInfoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-             \Log::error('Student Update Error: ' . $e->getMessage()); // Log the error
-             \Log::error($e->getTraceAsString());
             return back()->with('error', 'Failed to update student: ' . $e->getMessage());
         }
     }
