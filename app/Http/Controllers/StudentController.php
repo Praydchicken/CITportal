@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Student;
-use App\Models\AdminAnnouncement;
+use App\Models\TeacherAnnouncement;
 use App\Models\FacultyLoad;
 use App\Http\Requests\StoreStudentRequest;
 use App\Http\Requests\UpdateStudentRequest;
@@ -32,7 +32,7 @@ class StudentController extends Controller
         }
 
         // Get relevant announcements using pivot tables
-        $announcements = AdminAnnouncement::where(function($query) use ($student) {
+        $announcements = TeacherAnnouncement::where(function($query) use ($student) {
             $query->whereDoesntHave('sections')
                 ->whereDoesntHave('yearLevels')
                 ->orWhereHas('sections', function($q) use ($student) {
