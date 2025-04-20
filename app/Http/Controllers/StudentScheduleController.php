@@ -42,9 +42,9 @@ class StudentScheduleController extends Controller
         ->get();
 
         // Check if faculty load exists
-        if ($facultyLoad->isEmpty()) {
-            return redirect()->route('student.dashboard')->with('error', 'No class schedule found for this student.');
-        }
+        // if ($facultyLoad->isEmpty()) {
+        //     return redirect()->route('student.dashboard')->with('error', 'No class schedule found for this student.');
+        // }
 
         // Retrieve class schedules based on faculty load
         $classSchedule = $facultyLoad->map(function($load) {
