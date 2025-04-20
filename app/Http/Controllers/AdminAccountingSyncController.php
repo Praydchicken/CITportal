@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Http;
 use App\Models\Student;
 use App\Models\FinancialRecord;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class AdminAccountingSyncController extends Controller
 {
@@ -63,9 +65,6 @@ class AdminAccountingSyncController extends Controller
                 $logs[] = "Updated $recordCount records for student ID: $studentNumber";
             } else {
                 $logs[] = "Failed to fetch records for student ID: $studentNumber. Response: " . $response->body();
-                \Log::error("Failed to fetch financial records for student: {$studentNumber}", [
-                    'response' => $response->body(),
-                ]);
             }
         }
 
@@ -74,6 +73,33 @@ class AdminAccountingSyncController extends Controller
         return response()->json([
             'message' => 'Financial records synced successfully.',
             'logs' => $logs
+        ]);
+    }
+    public function searchRecord(Request $request)
+    {
+        $request->input('search');
+
+        $financialRecords = FinancialRecord::with([
+        'student_number',
+        'school_year',
+        'semester',
+        'tuition_fee',
+        'discount',
+        'adjustment',
+        'amount_paid',
+        'balance',
+
+        ])
+            ->when($request->search, function ($query, $search) {
+                return $query->where('student_number', 'like', '%' . $search . '%');
+            })
+            ->orderBy('school_year', 'desc')
+            ->orderBy('semester', 'desc')
+            ->get(); // Use get() instead of paginate()
+
+        return Inertia::render('AdminDashboard/AdminAccountingSync', [
+            'financialRecords' => $financialRecords,
+            'search' => $request->only('search'),
         ]);
     }
 }
