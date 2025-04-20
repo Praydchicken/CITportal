@@ -8,7 +8,7 @@ class FinancialRecord extends Model
 {
     protected $table = 'student_financials';
     protected $fillable = [
-        'student_id',
+        'student_number',
         'school_year',
         'semester',
         'tuition_fee',
