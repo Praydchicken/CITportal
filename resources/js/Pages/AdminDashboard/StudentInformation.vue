@@ -25,39 +25,138 @@ defineOptions({
 
 const props = defineProps({
   title: String,
-  students: Array,
+  students: Object,
   sections: Array,
   yearLevels: Array,
   studentStatuses: Array,
-  activeSchoolYear: {
-    type: Object,
-    required: true
-  },
-  schoolYears: {
-    type: Array,
-    required: true
-  },
+  activeSchoolYear: Object,
+  schoolYears: Array,
   semesters: Array,
+  filters: Object,
 });
 
+const studentId = ref('');
 const sections = ref(props.sections);
 const yearLevels = ref(props.yearLevels);
-const students = ref(props.students);
 const isEditMode = ref(false);
 const selectedStudent = ref(null);
 const loading = ref(false);
-const searchQuery = ref('');
-const selectedSchoolYear = ref('');
-const selectedSection = ref('');
-const selectedYearLevel = ref('');
-const selectedSemester = ref('');
+
+const search = ref(props.filters.search || '');
+const yearLevelFilter = ref(props.filters.year_level || '');
+const semesterFilter = ref(props.filters.semester || '');
+const sectionFilter = ref(props.filters.section || '');
+
+
+const filteredSections = computed(() => {
+  let filtered = props.sections;
+
+  if (yearLevelFilter.value) {
+    filtered = filtered.filter(section => section.year_level_id == yearLevelFilter.value);
+  }
+
+  if (props.activeSchoolYear?.id) {
+    filtered = filtered.filter(section => section.school_year_id == props.activeSchoolYear.id);
+  }
+
+  if (semesterFilter.value) {
+    filtered = filtered.filter(section => section.semester_id == semesterFilter.value);
+  }
+
+  return filtered;
+});
+
 
 // Watch for props.students changes and maintain the order
-watch(() => props.students, (newStudents) => {
-  if (newStudents) {
-    students.value = newStudents;
+watch(search, async (newSearch) => {
+  if(newSearch.length === 9 || newSearch.length === 0) {
+     router.get(route('admin.student.info'), {
+    search: newSearch,
+    year_level: yearLevelFilter.value,
+    semester: semesterFilter.value,
+    section: sectionFilter.value,
+  }, {
+    preserveState: true,
+    replace: true,
+    preserveScroll: true,
+    // Use replace to avoid cluttering browser history
+  });
   }
 });
+
+const handleInputChange = () => {
+	search.value = search.value.replace(/\D/g, '').slice(0, 9)
+}
+
+
+watch(yearLevelFilter, async (newYearLevel) => {
+  if (sectionFilter.value && newYearLevel) {
+        const isSectionValid = props.sections.some(
+            section => section.id == sectionFilter.value && section.year_level_id == newYearLevel
+        );
+        if (!isSectionValid) {
+            sectionFilter.value = '';
+        }
+    }
+  router.get(route('admin.student.info'), {
+    search: search.value,
+    year_level: newYearLevel,
+    semester: semesterFilter.value,
+    section: sectionFilter.value,
+  }, {
+    preserveScroll: true,
+    preserveState: true,
+    replace: true,
+    // Use replace to avoid cluttering browser history
+  });
+});
+
+watch(semesterFilter, async (newSemester) => {
+  if (sectionFilter.value && newSemester) {
+        const isSectionValid = props.sections.some(
+            section => section.id == sectionFilter.value && section.semester_id == newSemester
+        );
+        if (!isSectionValid) {
+            sectionFilter.value = '';
+        }
+    }
+  router.get(route('admin.student.info'), {
+    search: search.value,
+    year_level: yearLevelFilter.value,
+    semester: newSemester,
+    section: sectionFilter.value,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+    // Use replace to avoid cluttering browser history
+  });
+});
+
+watch(sectionFilter, async (newSection) => {
+  router.get(route('admin.student.info'), {
+    search: search.value,
+    year_level: yearLevelFilter.value,
+    semester: semesterFilter.value,
+    section: newSection,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+    // Use replace to avoid cluttering browser history
+  });
+});
+
+const resetFilters = () => {
+    search.value = '';           // Clear the search input
+    yearLevelFilter.value = '';  // Reset the year level filter
+ // Reset the selected year level (for section dependency)
+    semesterFilter.value = ''; // Reset the semester filter
+    sectionFilter.value = '';    // Reset the section filter
+
+    // Trigger a new Inertia GET request without any filter parameters
+    router.get(route('admin.student.info'), {}, { replace: true });
+};
 
 const isModalOPen = ref(false);
 
@@ -104,13 +203,13 @@ const openModal = (student) => {
 
 
 const closeModal = () => {
-   console.log("Closing modal...");
+  console.log("Closing modal...");
   if (loading.value) return;
   selectedStudent.value = null;
   isEditMode.value = false;
   form.reset();  // Reset form data
   form.clearErrors();  // Clear form errors
-        isModalOPen.value = false;
+  isModalOPen.value = false;
 
 };
 
@@ -192,7 +291,7 @@ const submitForm = () => {
       onSuccess: (page) => {
         // Show success notification
         showNotification('Student added successfully');
-        
+
         // Add the new student to the beginning of the list
         if (page?.props?.student) {
           // Remove any existing entry with the same ID if it exists
@@ -203,9 +302,9 @@ const submitForm = () => {
           // Add the new student at the beginning
           students.value.unshift(page.props.student);
         }
-        
+
         // Close modal and reset form
-          isModalOPen.value = false;
+        isModalOPen.value = false;
         form.reset();
         closeModal();
       },
@@ -222,37 +321,37 @@ const submitForm = () => {
 };
 
 const viewStudentInfo = (student) => {
-   router.visit(`/students/${student.id}/details`)
+  router.visit(`/students/${student.id}/details`)
 }
 
 const deleteStudent = (id) => {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#1a3047',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            router.delete(`/student/${id}/delete`, {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Remove student from the list
-                    const index = students.value.findIndex(s => s.id === id);
-                    if (index !== -1) {
-                        students.value.splice(index, 1);
-                    }
-                    showNotification('Student deleted successfully');
-                },
-                onError: (errors) => {
-                    console.log("Error deleting student:", errors);
-                    showNotification('Failed to delete student', 'error');
-                },
-            });
-        }
-    });
+  Swal.fire({
+    title: 'Are you sure?',
+    text: "You won't be able to revert this!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#1a3047',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      router.delete(`/student/${id}/delete`, {
+        preserveScroll: true,
+        onSuccess: () => {
+          // Remove student from the list
+          const index = students.value.findIndex(s => s.id === id);
+          if (index !== -1) {
+            students.value.splice(index, 1);
+          }
+          showNotification('Student deleted successfully');
+        },
+        onError: (errors) => {
+          console.log("Error deleting student:", errors);
+          showNotification('Failed to delete student', 'error');
+        },
+      });
+    }
+  });
 };
 
 const tableHeaders = [
@@ -271,140 +370,28 @@ const processNestedValue = (item, key) => {
   return key.split('.').reduce((obj, k) => obj?.[k], item) || 'N/A';
 };
 
-// Computed property for filtered students
-const filteredStudents = computed(() => {
-  let filtered = students.value;
-  
-  // Filter by school year if selected
-  if (selectedSchoolYear.value) {
-    filtered = filtered.filter(student => 
-      student.school_year?.id === selectedSchoolYear.value
-    );
-  }
 
-  // Filter by section if selected
-  if (selectedSection.value) {
-    filtered = filtered.filter(student => 
-      student.section?.section === selectedSection.value
-    );
-  }
-
-  // Filter by year level if selected
-  if (selectedYearLevel.value) {
-    filtered = filtered.filter(student => 
-      student.year_level?.id === selectedYearLevel.value
-    );
-  }
-
-  // Filter by semester if selected
-  if (selectedSemester.value) {
-    filtered = filtered.filter(student => 
-      student.semester?.id == selectedSemester.value
-    );
-  }
-  
-  // Then apply search query filter
-  if (searchQuery.value) {
-    const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(student => {
-      return (
-        (student.student_number && student.student_number.toLowerCase().includes(query)) ||
-        (student.first_name && student.first_name.toLowerCase().includes(query)) ||
-        (student.middle_name && student.middle_name.toLowerCase().includes(query)) ||
-        (student.last_name && student.last_name.toLowerCase().includes(query)) ||
-        (student.user?.email && student.user.email.toLowerCase().includes(query)) ||
-        (student.section?.section && student.section.section.toLowerCase().includes(query)) ||
-        (student.year_level?.year_level && student.year_level.year_level.toLowerCase().includes(query)) ||
-        (student.status?.status_name && student.status.status_name.toLowerCase().includes(query)) ||
-        (student.semester?.semester_name && student.semester.semester_name.toLowerCase().includes(query))
-      );
-    });
-  }
-  
-  return filtered;
-});
-
-// Update the filteredSections computed property
-const filteredSections = computed(() => {
-  if (!selectedYearLevel.value) {
-    // When no year level is selected, show unique sections
-    const uniqueSections = new Set(sections.value.map(section => section.section));
-    return Array.from(uniqueSections).map(sectionName => ({
-      id: sections.value.find(s => s.section === sectionName).id,
-      section: sectionName
-    }));
-  }
-  
-  // When year level is selected, filter sections by year level
-  const yearLevelSections = sections.value.filter(section => 
-    section.year_level_id === parseInt(selectedYearLevel.value)
-  );
-  
-  // Return unique sections for the selected year level
-  const uniqueSections = new Set(yearLevelSections.map(section => section.section));
-  return Array.from(uniqueSections).map(sectionName => ({
-    id: yearLevelSections.find(s => s.section === sectionName).id,
-    section: sectionName
-  }));
-});
-
-// Add computed property for form sections
-const formFilteredSections = computed(() => {
-  if (!form.year_level_id) {
-    return [];
-  }
-  return sections.value.filter(section => 
-    section.year_level_id === parseInt(form.year_level_id)
-  );
-});
-
-// Add watcher for form year level changes
-watch(() => form.year_level_id, (newValue) => {
-  // Reset section when year level changes
-  form.section_id = '';
-});
-
-// Add watcher for year level filter changes
-watch(selectedYearLevel, (newValue) => {
-  // Reset section when year level changes
-  selectedSection.value = '';
-});
-
-// Keep tableData computed property
-const tableData = computed(() => {
-  return filteredStudents.value;
-});
-
-// Add function to handle pagination
-const handlePageChange = (url) => {
-  if (!url) return;
-  
-  router.visit(url, {
-    preserveState: true,
-    preserveScroll: true,
-    only: ['students']
-  });
-};
-
+console.log('Students Prop:', props.students); // Check the entire prop object
+console.log('Students Meta:', props.students.meta);
 </script>
 
 <template>
   <div class="relative">
     <!-- Notification component -->
     <Teleport to="body">
-      <Notification 
-        :show="notification.show" 
-        :message="notification.message" 
-        :type="notification.type" 
-      />
+      <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
     </Teleport>
 
     <!-- Active School Year Banner -->
-    <div v-if="activeSchoolYear" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+    <div v-if="activeSchoolYear"
+      class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
       <div class="flex items-center">
         <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+            fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd" />
           </svg>
         </div>
         <div class="ml-3">
@@ -420,7 +407,9 @@ const handlePageChange = (url) => {
       <div class="flex items-center">
         <div class="flex-shrink-0">
           <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clip-rule="evenodd" />
           </svg>
         </div>
         <div class="ml-3">
@@ -432,129 +421,68 @@ const handlePageChange = (url) => {
     </div>
 
     <Overlay :show="isModalOPen" @click="closeModal" />
-    
+
     <!-- Search and Filter Section - Updated Layout -->
-    <div class="flex flex-col gap-4 mb-4"> 
+    <div class="flex flex-col mb-4">
       <!-- Top Row: Search and Add Button -->
       <div class="flex justify-between items-center">
         <!-- Search Input -->
         <form @submit.prevent>
-          <input 
-            v-model="searchQuery"
-            type="text" 
-            placeholder="Search for students..." 
-            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[300px]"
-          >
+          <input v-model="search" @input=handleInputChange type="text" placeholder="Search Student No..." maxlength="9"
+            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[300px]">
         </form>
 
         <!-- Add New Students Button -->
-        <button @click="openModal(null)" 
+        <button @click="openModal(null)"
           class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
           Add New Students
         </button>
       </div>
-
-      <!-- Bottom Row: Filters -->
-      <div class="flex items-center gap-6 flex-wrap"> 
-        <!-- School Year Filter -->
-        <div class="w-48 relative">
-          <!-- Main dropdown -->
-          <select 
-            v-model="selectedSchoolYear"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
-            <option value="" class="hidden">All School Years</option>
-            <option v-for="year in schoolYears" :key="year.id" :value="year.id">
-              {{ year.school_year }}
-            </option>
-          </select>
-          
-          <!-- Quick action button - only show when a school year is selected -->
-          <div 
-            v-if="selectedSchoolYear"
-            @click="selectedSchoolYear = ''"
-            class="w-full bg-[#0d6efd] text-white p-2 text-[0.875rem] leading-[1.25rem] rounded-b-[0.5rem] text-center cursor-pointer hover:bg-[#0b5ed7] transition-colors"
-          >
-            All School Years
-          </div>
-
-          <!-- Custom dropdown arrow -->
-          <div class="absolute right-3 top-3 pointer-events-none">
-            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-
-        <!-- Section Filter -->
-        <div class="w-48 relative">
-          <select 
-            v-model="selectedSection"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
-            <option value="">All Sections</option>
-            <option v-for="section in filteredSections" :key="section.id" :value="section.section">
-              {{ section.section }}
-            </option>
-          </select>
-
-          <!-- Custom dropdown arrow -->
-          <div class="absolute right-3 top-3 pointer-events-none">
-            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
-
-        <!-- Year Level Filter -->
-        <div class="w-48 relative">
-          <select 
-            v-model="selectedYearLevel"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+      <div class="flex gap-4 items-center mt-3">
+        <div>
+          <select id="year_level_filter" v-model="yearLevelFilter"
+            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
             <option value="">All Year Levels</option>
             <option v-for="year in yearLevels" :key="year.id" :value="year.id">
               {{ year.year_level }}
             </option>
           </select>
-
-          <!-- Custom dropdown arrow -->
-          <div class="absolute right-3 top-3 pointer-events-none">
-            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
         </div>
 
-        <!-- Semester Filter -->
-        <div class="w-48 relative">
-          <select 
-            v-model="selectedSemester"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+        <div>
+          <select id="section_filter" v-model="sectionFilter"
+            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            <option value="">All Sections</option>
+            <option v-for="section in filteredSections" :key="section.id" :value="section.id">
+              {{ section.section }}
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <select id="semester_filter" v-model="semesterFilter"
+            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
             <option value="">All Semesters</option>
             <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
               {{ semester.semester_name }}
             </option>
           </select>
-
-          <!-- Custom dropdown arrow -->
-          <div class="absolute right-3 top-3 pointer-events-none">
-            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
         </div>
-      </div> 
-    </div> 
+
+        <button @click="resetFilters"
+          class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+          Clear Filter
+        </button>
+      </div>
+    </div>
 
     <!-- Reusable Table Component -->
     <div class="overflow-x-auto">
       <table class="min-w-full divide-y divide-gray-200">
         <thead>
           <tr class="bg-[#1a3047] text-white">
-            <th v-for="header in tableHeaders" :key="header.key" 
-                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+            <th v-for="header in tableHeaders" :key="header.key"
+              class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
               {{ header.label }}
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
@@ -562,20 +490,21 @@ const handlePageChange = (url) => {
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="(student, index) in tableData" :key="student.id" 
-              :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-50'">
-            <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        <tbody class="bg-white divide-y divide-gray-200" :key="JSON.stringify(students)">
+          <tr v-for="(student, index) in students.data" :key="student.id"
+            :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
+            <td v-for="header in tableHeaders" :key="header.key"
+              class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {{ processNestedValue(student, header.key) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               <div class="flex space-x-2">
-                 <button @click="viewStudentInfo(student)" 
-                    class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">View</button>
-                <button @click="openModal(student)" 
-                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Edit</button>
-                <button @click="deleteStudent(student.id)" 
-                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                <button @click="viewStudentInfo(student)"
+                  class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded">View</button>
+                <button @click="openModal(student)"
+                  class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Edit</button>
+                <button @click="deleteStudent(student.id)"
+                  class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Delete</button>
               </div>
             </td>
           </tr>
@@ -584,47 +513,55 @@ const handlePageChange = (url) => {
     </div>
 
     <!-- Pagination -->
-    <div v-if="students.value && students.value.links && students.value.links.length > 3" class="mt-6 flex justify-center">
-      <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-        <template v-for="(link, index) in students.value.links" :key="index">
-          <a
-            v-if="link.url"
-            :href="link.url"
-            @click.prevent="handlePageChange(link.url)"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-            :class="{
-              'z-10 bg-[#1a3047] text-white border-[#1a3047]': link.active
-            }"
-            v-html="link.label"
-          ></a>
-          <span
-            v-else
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500"
-            v-html="link.label"
-          ></span>
+    <div class="mt-6 flex items-center justify-between p-6">
+      <div class="text-sm text-gray-700">
+        Showing <span class="font-semibold">{{ students.from }}</span> to <span class="font-semibold">{{ students.to
+          }}</span> of <span class="font-semibold">{{ students.total }}</span> students
+      </div>
+      <nav class="relative z-0 rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+        <Link v-if="students.currentPage > 1" :href="students.links.prev" preserve-scroll rel="prev"
+          aria-label="Previous"
+          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10">
+        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd"
+            d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+            clip-rule="evenodd" />
+        </svg>
+        </Link>
+
+        <template v-for="(link, key) in students.links" :key="key">
+          <Link v-if="link.url" :href="link.url" preserve-scroll :class="[
+            'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10',
+            { 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600': link.active },
+            key === 0 && students.currentPage === 1 ? 'rounded-l-md' : '',
+            key === students.links.length - 1 && students.currentPage === students.lastPage ? 'rounded-r-md' : '',
+          ]" :aria-current="link.active ? 'page' : null" v-html="link.label">
+          </Link>
+          <span v-else-if="link.label && isNaN(link.label)"></span>
         </template>
+
+        <Link v-if="students.currentPage < students.lastPage" :href="students.links.next" preserve-scroll rel="next"
+          aria-label="Next"
+          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10">
+        </Link>
       </nav>
     </div>
-
     <!-- Reusable Modal Component -->
     <ReusableModal :show="isModalOPen" :title="isEditMode ? 'Edit Student' : 'Add Student'" :loading="loading"
       :submit-button-text="isEditMode ? 'Edit Student' : 'Add Student'" @close="closeModal" @submit="submitForm">
       <!-- Form Grid Container -->
       <div class="mb-4 bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-        <p>Note: A password will be automatically generated using the student's first and last name. For example, for "John Doe", the password will be "johndoe".</p>
+        <p>Note: A password will be automatically generated using the student's first and last name. For example, for
+          "John
+          Doe", the password will be "johndoe".</p>
       </div>
-      
+
       <div class="grid grid-cols-3 gap-4">
         <!-- 1st Row -->
         <div>
           <label for="student_number" class="block text-sm font-medium text-gray-700">Student Number</label>
-          <input 
-            type="text" 
-            name="student_number" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.student_number }"
-            v-model="form.student_number"
-          >
+          <input type="text" name="student_number" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.student_number }" v-model="form.student_number">
           <p v-if="form.errors.student_number" class="text-red-500 text-sm mt-1">
             {{ form.errors.student_number }}
           </p>
@@ -632,13 +569,8 @@ const handlePageChange = (url) => {
 
         <div>
           <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
-          <input 
-            type="text" 
-            name="first_name" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.first_name }"
-            v-model="form.first_name"
-          >
+          <input type="text" name="first_name" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.first_name }" v-model="form.first_name">
           <p v-if="form.errors.first_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.first_name }}
           </p>
@@ -646,13 +578,8 @@ const handlePageChange = (url) => {
 
         <div>
           <label for="middle_name" class="block text-sm font-medium text-gray-700">Middle Name</label>
-          <input 
-            type="text" 
-            name="middle_name" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.middle_name }"
-            v-model="form.middle_name"
-          >
+          <input type="text" name="middle_name" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.middle_name }" v-model="form.middle_name">
           <p v-if="form.errors.middle_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.middle_name }}
           </p>
@@ -661,26 +588,17 @@ const handlePageChange = (url) => {
         <!-- 2nd Row -->
         <div>
           <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
-          <input 
-            type="text" 
-            name="last_name" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.last_name }"
-            v-model="form.last_name"
-          >
+          <input type="text" name="last_name" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.last_name }" v-model="form.last_name">
           <p v-if="form.errors.last_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.last_name }}
           </p>
         </div>
 
-         <div>
+        <div>
           <label for="year_level" class="block text-sm font-medium text-gray-700">Year Level</label>
-          <select 
-            id="year_level"
-            v-model="form.year_level_id" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.year_level_id }"
-          >
+          <select id="year_level" v-model="form.year_level_id" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.year_level_id }">
             <option value="" disabled selected>Select Year Level</option>
             <option v-for="year in yearLevels" :key="year.id" :value="year.id">
               {{ year.year_level }}
@@ -693,12 +611,8 @@ const handlePageChange = (url) => {
 
         <div>
           <label for="section" class="block text-sm font-medium text-gray-700">Section</label>
-          <select 
-            id="section"
-            v-model="form.section_id" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.section_id }"
-          >
+          <select id="section" v-model="form.section_id" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.section_id }">
             <option value="" disabled selected>Select Section</option>
             <option v-for="section in formFilteredSections" :key="section.id" :value="section.id">
               {{ section.section }}
@@ -714,13 +628,8 @@ const handlePageChange = (url) => {
           <label for="phone_number" class="block text-sm font-medium text-gray-700">
             Phone Number <span class="text-gray-500 text-xs">(Optional)</span>
           </label>
-          <input 
-            type="text" 
-            name="phone_number" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.phone_number }"
-            v-model="form.phone_number"
-          >
+          <input type="text" name="phone_number" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.phone_number }" v-model="form.phone_number">
           <p v-if="form.errors.phone_number" class="text-red-500 text-sm mt-1">
             {{ form.errors.phone_number }}
           </p>
@@ -728,13 +637,8 @@ const handlePageChange = (url) => {
 
         <div>
           <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
-          <select 
-            id="gender"
-            name="gender" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.gender }"
-            v-model="form.gender"
-          >
+          <select id="gender" name="gender" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.gender }" v-model="form.gender">
             <option value="" disabled selected>Select Gender</option>
             <option value="Male">Male</option>
             <option value="Female">Female</option>
@@ -749,13 +653,8 @@ const handlePageChange = (url) => {
           <label for="address" class="block text-sm font-medium text-gray-700">
             Address <span class="text-gray-500 text-xs">(Optional)</span>
           </label>
-          <input 
-            type="text" 
-            name="address" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.address }"
-            v-model="form.address"
-          >
+          <input type="text" name="address" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.address }" v-model="form.address">
           <p v-if="form.errors.address" class="text-red-500 text-sm mt-1">
             {{ form.errors.address }}
           </p>
@@ -764,13 +663,8 @@ const handlePageChange = (url) => {
         <!-- 4th Row -->
         <div class="col-span-2">
           <label for="enrollment_date" class="block text-sm font-medium text-gray-700">Enrollment Date</label>
-          <input 
-            type="date" 
-            name="enrollment_date" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.enrollment_date }"
-            v-model="form.enrollment_date"
-          >
+          <input type="date" name="enrollment_date" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.enrollment_date }" v-model="form.enrollment_date">
           <p v-if="form.errors.enrollment_date" class="text-red-500 text-sm mt-1">
             {{ form.errors.enrollment_date }}
           </p>
@@ -780,19 +674,10 @@ const handlePageChange = (url) => {
         <!-- Show full dropdown when editing -->
         <div v-if="isEditMode">
           <label for="student_status" class="block text-sm font-medium text-gray-700">Student Status</label>
-          <select 
-            id="student_status"
-            name="student_status_id" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.student_status_id }"
-            v-model="form.student_status_id"
-          >
+          <select id="student_status" name="student_status_id" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.student_status_id }" v-model="form.student_status_id">
             <option value="" disabled>Select Status</option> <!-- Keep disabled default for edit -->
-            <option 
-              v-for="status in studentStatuses" 
-              :key="status.id" 
-              :value="status.id"
-            >
+            <option v-for="status in studentStatuses" :key="status.id" :value="status.id">
               {{ status.status_name }}
             </option>
           </select>
@@ -803,13 +688,8 @@ const handlePageChange = (url) => {
         <!-- Show readonly text input when adding -->
         <div v-else>
           <label for="student_status_display" class="block text-sm font-medium text-gray-700">Student Status</label>
-          <input 
-            type="text" 
-            id="student_status_display" 
-            :value="enrolledStatus?.status_name || 'Enrolled'" 
-            class="input-field-add-student bg-gray-200 cursor-not-allowed" 
-            readonly 
-          />
+          <input type="text" id="student_status_display" :value="enrolledStatus?.status_name || 'Enrolled'"
+            class="input-field-add-student bg-gray-200 cursor-not-allowed" readonly />
           <!-- Hidden input to actually submit the ID -->
           <!-- <input type="hidden" name="student_status_id" v-model="form.student_status_id">  -->
         </div>
@@ -817,13 +697,8 @@ const handlePageChange = (url) => {
         <!-- 5th Row -->
         <div>
           <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-          <input 
-            type="text" 
-            name="email" 
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.email }"
-            v-model="form.email"
-          >
+          <input type="text" name="email" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.email }" v-model="form.email">
           <p v-if="form.errors.email" class="text-red-500 text-sm mt-1">
             {{ form.errors.email }}
           </p>
@@ -832,13 +707,8 @@ const handlePageChange = (url) => {
         <!-- Semester Selection -->
         <div>
           <label for="semester" class="block text-sm font-medium text-gray-700">Semester</label>
-          <select 
-            id="semester"
-            name="semester_id"
-            class="input-field-add-student"
-            :class="{ 'border-red-500': form.errors.semester_id }"
-            v-model="form.semester_id"
-          >
+          <select id="semester" name="semester_id" class="input-field-add-student"
+            :class="{ 'border-red-500': form.errors.semester_id }" v-model="form.semester_id">
             <option value="" disabled selected>Select Semester</option>
             <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
               {{ semester.semester_name }}
