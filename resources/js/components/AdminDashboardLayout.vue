@@ -14,7 +14,7 @@ const page = usePage();
 
 const adminLinks = [
   { name: "Dashboard", url: route('admin.dashboard') },
-  { name: "Manage Students", url: route('student.info') },
+  { name: "Manage Students", url: route('admin.student.info') },
   { name: "Faculty Load", url: route('admin.faculty.load') },
   { name: "Grade Report", url: route('admin.student.grade') },
   { name: "Section Management", url: route('admin.section.management') },
