@@ -70,27 +70,27 @@ const filterGrades = (grades) => {
 
   // Filter by school year
   if (selectedSchoolYear.value) {
-    filtered = filtered.filter(grade => 
+    filtered = filtered.filter(grade =>
       grade.school_year_id === parseInt(selectedSchoolYear.value)
     );
   }
 
   // Filter by section
   if (selectedSection.value) {
-    filtered = filtered.filter(grade => 
+    filtered = filtered.filter(grade =>
       grade.student?.section?.section === selectedSection.value
     );
   }
 
   // Filter by subject
   if (selectedSubject.value) {
-    filtered = filtered.filter(grade => 
+    filtered = filtered.filter(grade =>
       grade.curriculum_id === parseInt(selectedSubject.value)
     );
   }
 
   // filter by grade status
-  if(selectedGradeStatus.value) {
+  if (selectedGradeStatus.value) {
     filtered = filtered.filter(grade => grade.grade_status === selectedGradeStatus.value);
   }
 
@@ -128,11 +128,11 @@ const filteredStudents = computed(() => {
   if (!form.year_level_id || !form.section_id) {
     return [];
   }
-  
+
   return students.value.filter(student => {
     const yearLevelMatch = student.year_level?.id === parseInt(form.year_level_id);
     const sectionMatch = student.section?.section === filteredSections.value.find(s => s.id === form.section_id)?.section;
-    
+
     return yearLevelMatch && sectionMatch;
   });
 });
@@ -147,12 +147,12 @@ const filteredSections = computed(() => {
       section: sectionName
     }));
   }
-  
+
   // When year level is selected, filter sections by year level
-  const yearLevelSections = sections.value.filter(section => 
+  const yearLevelSections = sections.value.filter(section =>
     section.year_level_id === parseInt(selectedYearLevel.value)
   );
-  
+
   // Return unique sections for the selected year level
   const uniqueSections = new Set(yearLevelSections.map(section => section.section));
   return Array.from(uniqueSections).map(sectionName => ({
@@ -183,11 +183,11 @@ watch(() => form.section_id, (newValue) => {
   }
 }, { immediate: true });
 
-const viewCourse = (studentGradeId) => { 
+const viewCourse = (studentGradeId) => {
   router.get(route('admin.student.view.grade', {
     studentGradeId
   }));
-  
+
 }
 </script>
 
@@ -196,19 +196,19 @@ const viewCourse = (studentGradeId) => {
     <Overlay :show="isModalOpen" @click="closeModal" />
 
     <Teleport to="body">
-      <Notification 
-        :show="notification.show" 
-        :message="notification.message" 
-        :type="notification.type" 
-      />
+      <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
     </Teleport>
 
     <!-- Active School Year Banner -->
-    <div v-if="activeSchoolYear" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+    <div v-if="activeSchoolYear"
+      class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
       <div class="flex items-center">
         <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+            fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd" />
           </svg>
         </div>
         <div class="ml-3">
@@ -224,20 +224,14 @@ const viewCourse = (studentGradeId) => {
       <div class="flex items-center gap-4">
         <!-- Search Input -->
         <form @submit.prevent>
-          <input 
-            v-model="searchQuery"
-            type="text" 
-            placeholder="Search for students..." 
-            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[200px]"
-          >
+          <input v-model="searchQuery" type="text" placeholder="Search for students..."
+            class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[200px]">
         </form>
-        
+
         <!-- School Year Filter -->
         <div class="w-48 relative">
-          <select 
-            v-model="selectedSchoolYear"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+          <select v-model="selectedSchoolYear"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
             <option value="" class="hidden">All School Years</option>
             <option v-for="year in schoolYears" :key="year.id" :value="year.id">
               {{ year.school_year }}
@@ -252,11 +246,9 @@ const viewCourse = (studentGradeId) => {
         </div>
 
         <!-- Section Filter -->
-       <div class="w-48 relative">
-          <select 
-            v-model="selectedSection"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+        <div class="w-48 relative">
+          <select v-model="selectedSection"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
             <option value="">All Sections</option>
             <option v-for="section in filteredSections" :key="section.id" :value="section.section">
               {{ section.section }}
@@ -273,10 +265,8 @@ const viewCourse = (studentGradeId) => {
 
         <!-- Subject Filter -->
         <div class="w-48 relative">
-          <select
-            v-model="selectedSubject"
-             class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+          <select v-model="selectedSubject"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
             <option value="">All Subjects</option>
             <option v-for="curriculum in curricula" :key="curriculum.id" :value="curriculum.id">
               {{ curriculum.course_code }} - {{ curriculum.subject_name }}
@@ -292,10 +282,8 @@ const viewCourse = (studentGradeId) => {
 
         <!-- Grade Status Filter -->
         <div class="w-48 relative">
-          <select 
-            v-model="selectedGradeStatus"
-            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500"
-          >
+          <select v-model="selectedGradeStatus"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
             <option value="">All Statuses</option>
             <option value="APPROVED">Approved</option>
             <option value="PENDING">Pending</option>
@@ -356,15 +344,15 @@ const viewCourse = (studentGradeId) => {
                 </span>
               </td>
               <td class="px-6 py-4 text-sm">
-                 <button
-                    @click="viewCourse(grade.id)"
-                    class="inline-flex items-center text-gray-600 hover:text-gray-900"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    </svg>
-                    View Course
+                <button @click="viewCourse(grade.id)"
+                  class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                  View Course
                 </button>
               </td>
             </tr>
@@ -407,7 +395,7 @@ const viewCourse = (studentGradeId) => {
               <td class="px-6 py-4 text-sm">{{ grade.curriculum?.subject_name }}</td>
               <td class="px-6 py-4 text-sm">{{ parseFloat(grade.grade).toFixed(2) }}</td>
               <td class="px-6 py-4 text-sm">{{ grade.grade_remarks }}</td>
-               <td class="px-6 py-4 text-sm">
+              <td class="px-6 py-4 text-sm">
                 <span :class="{
                   'text-green-600': grade.grade_status === 'APPROVED',
                   'text-yellow-600': grade.grade_status === 'PENDING',
@@ -417,15 +405,15 @@ const viewCourse = (studentGradeId) => {
                 </span>
               </td>
               <td class="px-6 py-4 text-sm">
-               <button
-                    @click="viewCourse(grade.id)"
-                    class="inline-flex items-center text-gray-600 hover:text-gray-900"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
-                    </svg>
-                    View Course
+                <button @click="viewCourse(grade.id)"
+                  class="inline-flex items-center text-gray-600 hover:text-gray-900">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd"
+                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                      clip-rule="evenodd" />
+                  </svg>
+                  View Course
                 </button>
               </td>
             </tr>

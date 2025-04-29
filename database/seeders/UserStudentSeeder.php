@@ -68,7 +68,7 @@ class UserStudentSeeder extends Seeder
                 'gender' => $faker->randomElement(['Male', 'Female']),
                 'phone_number' => '09' . $faker->numerify('#########'),
                 'address' => $faker->streetAddress . ', ' . $faker->randomElement($ncrCities) . ', Metro Manila',
-                'enrollment_date' => '2023-01-20',
+                'enrollment_date' => '2025-06-20',
             ]);
         }
     }

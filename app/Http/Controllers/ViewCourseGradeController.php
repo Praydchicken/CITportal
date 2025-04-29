@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 
 class ViewCourseGradeController extends Controller
 {
-   public function index(Request $request) 
+    public function index(Request $request)
     {
         try {
             // Validate request parameters
@@ -27,12 +27,12 @@ class ViewCourseGradeController extends Controller
             $user = Auth::user();
 
             // Get teacher with their faculty loads and related curriculum
-            $teacher = Teacher::with(['facultyLoads' => function($query) use ($request) {
+            $teacher = Teacher::with(['facultyLoads' => function ($query) use ($request) {
                 $query->where('semester_id', $request->semester)
                     ->with('curriculum:id,subject_name,course_code,units');
             }])
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+                ->where('user_id', $user->id)
+                ->firstOrFail();
 
             // Get curriculum IDs from faculty loads
             $assignedCurriculumIds = $teacher->facultyLoads->pluck('curriculum_id')->unique();
@@ -40,14 +40,14 @@ class ViewCourseGradeController extends Controller
             // Get the student with all their grades
             $student = Student::with([
                 'section.yearLevel',
-                'studentGrades' => function($query) use ($request) {
+                'studentGrades' => function ($query) use ($request) {
                     $query->where('semester_id', $request->semester)
                         ->with(['curriculum', 'schoolYear']);
                 }
             ])->findOrFail($request->student);
 
             // Get all school years the student has grades for
-            $schoolYears = SchoolYear::whereHas('studentGrades', function($query) use ($student, $request) {
+            $schoolYears = SchoolYear::whereHas('studentGrades', function ($query) use ($student, $request) {
                 $query->where('student_id', $student->id)
                     ->where('semester_id', $request->semester);
             })->orderBy('school_year', 'desc')->get();
@@ -59,7 +59,7 @@ class ViewCourseGradeController extends Controller
             // Filter by teacher's assigned subjects
             $curricula = Curriculum::where('year_level_id', $student->section->yearLevel->id)
                 ->where('semester_id', $request->semester)
-                ->when($assignedCurriculumIds->isNotEmpty(), function($query) use ($assignedCurriculumIds) {
+                ->when($assignedCurriculumIds->isNotEmpty(), function ($query) use ($assignedCurriculumIds) {
                     $query->whereIn('id', $assignedCurriculumIds);
                 })
                 ->get();
@@ -77,7 +77,7 @@ class ViewCourseGradeController extends Controller
                 // Add grades for each school year
                 foreach ($schoolYears as $year) {
                     $grade = $student->studentGrades->first(function ($grade) use ($curriculum, $year) {
-                        return $grade->curriculum_id == $curriculum->id && 
+                        return $grade->curriculum_id == $curriculum->id &&
                             $grade->school_year_id == $year->id;
                     });
 
@@ -119,13 +119,13 @@ class ViewCourseGradeController extends Controller
                     ]
                 ],
             ]);
-
         } catch (\Exception $e) {
             return back()->with('error', 'Error loading course grades: ' . $e->getMessage());
         }
     }
 
-    public function store(Request $request, $studentId) {
+    public function store(Request $request, $studentId)
+    {
         // dd($studentId);
 
         // Get the authenticated teacher
@@ -135,9 +135,9 @@ class ViewCourseGradeController extends Controller
         // Get the student
         $student = Student::where('id', $studentId)->first();
 
-         // Get active school year
+        // Get active school year
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
-        
+
         if (!$activeSchoolYear) {
             return back()->with('error', 'No active school year found.');
         }
@@ -146,9 +146,9 @@ class ViewCourseGradeController extends Controller
             'results' => 'required|array',
             'results.*.subject_name' => 'required|string',
             'results.*.course_code' => 'required|string',
-            'results.*.prelim_grade' => 'required|numeric',
-            'results.*.midterm_grade' => 'required|numeric',
-            'results.*.final_grade' => 'required|numeric',
+            'results.*.prelim_grade' => 'required|numeric|between:50,100',
+            'results.*.midterm_grade' => 'required|numeric|between:50,100',
+            'results.*.final_grade' => 'required|numeric|between:50,100',
             'results.*.raw_grade' => 'required|numeric',
             'results.*.converted_grade' => 'required|numeric',
             'results.*.remarks' => 'required|string',
@@ -178,15 +178,14 @@ class ViewCourseGradeController extends Controller
         }
 
         return back()->with('success', 'Grades submitted, please wait to approved it by the admin');
-
     }
 
     public function update(Request $request, $studentId)
     {
-        dd($request->all());
+        // dd($request->all());
 
         // Validate the request
-       $request->validate([
+        $request->validate([
             'editGrades' => 'required|array',
             'editGrades.*.curriculum_id' => 'required|exists:curricula,id',
             'editGrades.*.prelim_grade' => 'required|numeric|min:0|max:100',
@@ -205,7 +204,7 @@ class ViewCourseGradeController extends Controller
         try {
             DB::beginTransaction();
 
-           foreach ($request->editGrades as $course) {
+            foreach ($request->editGrades as $course) {
                 StudentGrade::updateOrCreate(
                     [
                         'student_id' => $studentId,
@@ -220,7 +219,7 @@ class ViewCourseGradeController extends Controller
                         'raw_grade' => $course['raw_grade'],
                         'gwa_equivalent' => $course['gwa_equivalent'],
                         'grade_remarks' => $course['grade_remarks'],
-                        'grade_status' => 'Pending',
+                        'grade_status' => 'PENDING',
                     ]
                 );
             }
@@ -229,7 +228,6 @@ class ViewCourseGradeController extends Controller
             DB::commit();
 
             return back()->with('success', 'Grades updated successfully!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             dd($e->getMessage());
@@ -238,7 +236,7 @@ class ViewCourseGradeController extends Controller
     }
 
     public function destroy($id)
-    {   
+    {
         try {
             $studentGrade = StudentGrade::find($id);
 
@@ -248,7 +246,6 @@ class ViewCourseGradeController extends Controller
 
             $studentGrade->delete(); // Soft delete (sets deleted_at instead of removing the record)
             return back()->with('success', 'Student deleted successfully');
-
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'Failed to delete student: ' . $e->getMessage()]);
         }

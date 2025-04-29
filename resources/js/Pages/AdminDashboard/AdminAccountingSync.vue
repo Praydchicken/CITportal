@@ -121,14 +121,14 @@ const totalBalance = computed(() =>
 		Sync All Records
 	</button>
 	<div class="p-8 max-w-7xl mx-auto space-y-8 bg-white">
-		<h1 class="text-4xl font-semibold text-gray-800 tracking-wide">Student Financial Records</h1>
+		<!-- <h1 class="text-4xl font-semibold text-gray-800 tracking-wide">Student Financial Records</h1> -->
 
 		<!-- Input Section -->
-		<div class="flex items-center gap-4 mb-6">
+		<!-- <div class="flex items-center gap-4 mb-6">
 			<input v-model="studentId" @input="handleInputChange" ref="inputField"
 				class="border-2 border-gray-300 p-4 rounded-lg w-72 text-gray-800 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition duration-200"
 				placeholder="Enter Student ID" :disabled="loading || syncLoading" maxlength="9" />
-		</div>
+		</div> -->
 
 		<!-- Expand/Collapse All -->
 		<div v-if="records.length" class="flex justify-end gap-3">

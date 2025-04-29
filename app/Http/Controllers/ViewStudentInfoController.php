@@ -106,6 +106,22 @@ class ViewStudentInfoController extends Controller
                         ->where('student_number', $studentNo)
                         ->firstOrFail();
 
+             // Check if there are any rejected or pending grades for the student in the current semester and year level
+            $hasUnapprovedGrades = StudentGrade::where('student_id', $student->id)
+                                                ->where('year_level_id', $student->year_level_id)
+                                                ->where('semester_id', $student->semester_id)
+                                                ->whereIn('grade_status', ['REJECTED', 'PENDING'])
+                                                ->exists();
+
+            if ($hasUnapprovedGrades) {
+                return back()->with([
+                    'flash' => [
+                        'error' => 'Student grade needs to be approved',
+                        'success' => false
+                    ]
+                ]);
+            }
+
             // Getting the curriculum where it match the year level id to the $student->year_level_id and count the result of it
             $curriculumCount = Curriculum::where('year_level_id', $student->year_level_id)
                                 ->where('semester_id', $student->semester_id)

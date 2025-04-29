@@ -20,32 +20,40 @@ class PostStudentInfoController extends Controller
 {
     public function index(Request $request)
     {
-        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->firstOrFail();
-
+        // Get active school year but don't fail if none exists
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
+        
         $students = Student::with([
-            'section',
-            'yearLevel',
-            'user',
-            'status',
-            'schoolYear',
-            'semester'
-        ])
-        ->where('school_year_id', $activeSchoolYear->id)
-        ->when($request->search, function ($query, $search) {
-            return $query->where('student_number', 'like', '%' . $search . '%');
-        })
-        ->when($request->year_level, function ($query, $yearLevel) {
-            return $query->where('year_level_id', $yearLevel);
-        })
-        ->when($request->semester, function ($query, $semester) {
-            return $query->where('semester_id', $semester);
-        })
-        ->when($request->section, function ($query, $section) {
-            return $query->where('section_id', $section);
-        })
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+                'section',
+                'yearLevel',
+                'user',
+                'status',
+                'schoolYear',
+                'semester'
+            ])
+            ->when($request->school_year, function ($query, $schoolYear) {
+                return $query->where('school_year_id', $schoolYear);
+            }, function ($query) use ($activeSchoolYear) {
+                // If no school year filter is applied, default to active school year if it exists
+                if ($activeSchoolYear) {
+                    return $query->where('school_year_id', $activeSchoolYear->id);
+                }
+            })
+            ->when($request->search, function ($query, $search) {
+                return $query->where('student_number', 'like', '%' . $search . '%');
+            })
+            ->when($request->year_level, function ($query, $yearLevel) {
+                return $query->where('year_level_id', $yearLevel);
+            })
+            ->when($request->semester, function ($query, $semester) {
+                return $query->where('semester_id', $semester);
+            })
+            ->when($request->section, function ($query, $section) {
+                return $query->where('section_id', $section);
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         $sections = Section::all();
         $yearLevels = YearLevel::all();
@@ -62,7 +70,7 @@ class PostStudentInfoController extends Controller
             'activeSchoolYear' => $activeSchoolYear,
             'schoolYears' => $schoolYears,
             'semesters' => $semesters,
-            'filters' => $request->only(['search', 'year_level', 'semester']),
+            'filters' => $request->only(['search', 'year_level', 'semester', 'section', 'school_year']),
         ]);
     }
     public function store(Request $request)
@@ -85,7 +93,29 @@ class PostStudentInfoController extends Controller
             'section_id' => 'required|exists:sections,id',
             'year_level_id' => 'required|exists:year_levels,id',
             'student_status_id' => 'required|exists:student_statuses,id',
-            'enrollment_date' => 'required|date',
+            'enrollment_date' => [
+                'required',
+                'date',
+                function ($attribute, $value, $fail) use ($activeSchoolYear) {
+                    // Parse the school year string (YYYY-YYYY)
+                    $years = explode('-', $activeSchoolYear->school_year);
+                    if (count($years) === 2) {
+                        $startYear = (int) $years[0];
+                        $endYear = (int) $years[1];
+
+                        // Extract the year from the enrollment date
+                        $enrollmentYear = (int) date('Y', strtotime($value));
+
+                        // Check if the enrollment year falls within the active school year range
+                        if ($enrollmentYear < $startYear || $enrollmentYear > $endYear) {
+                            $fail("The enrollment date's year must be within the active school year ({$activeSchoolYear->school_year}).");
+                        }
+                    } else {
+                        // Handle cases where the school_year format is unexpected
+                        $fail("The active school year format is invalid.");
+                    }
+                },
+            ],
             'semester_id' => 'required|exists:semesters,id',
         ]);
 

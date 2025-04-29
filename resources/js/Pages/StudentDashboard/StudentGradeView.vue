@@ -12,18 +12,27 @@ const props = defineProps({
     gradesByLevel: Array,
 })
 
-console.log(props.studentGrades);
+console.log(props.gradesByLevel);
 
 
 </script>
 
 <template>
     <div>
-        <!-- <h1 class="text-2xl font-bold mb-4">{{ title }}</h1> -->
+        <div v-if="props.gradesByLevel.length === 0" class="text-center py-12 bg-white rounded-lg shadow-sm">
+            <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                viewBox="0 0 24 24">
+                <path fill="currentColor"
+                    d="M18 10.5V6l-2.11 1.06A4 4 0 0 1 12 12a4 4 0 0 1-3.89-4.94L5 5.5L12 2l7 3.5v5zM12 9l-2-1c0 1.1.9 2 2 2s2-.9 2-2zm2.75-3.58L12.16 4.1L9.47 5.47l2.6 1.32zM12 13c2.67 0 8 1.33 8 4v3H4v-3c0-2.67 5.33-4 8-4m0 1.9c-3 0-6.1 1.46-6.1 2.1v1.1h12.2V17c0-.64-3.13-2.1-6.1-2.1" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No Grades</h3>
+        </div>
 
-        <div v-for="levelData in gradesByLevel" :key="levelData.level" class="mb-8">
+        <div v-else v-for="levelData in gradesByLevel" :key="levelData.level" class="mb-8">
             <h2 class="text-xl font-semibold mb-2">Year Level: {{ levelData.level }}</h2>
             <GradeReportTable :grades="levelData.grades" />
         </div>
+
+
     </div>
 </template>

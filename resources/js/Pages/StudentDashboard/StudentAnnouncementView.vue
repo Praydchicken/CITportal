@@ -1,37 +1,20 @@
 <script setup>
 import StudentDashboardLayout from '../../components/StudentDashboardLayout.vue';
 import { ref } from 'vue';
+import { format } from 'date-fns'; // Import the format function
 
 defineOptions({
     layout: StudentDashboardLayout
 });
 
-const dummyAnnouncements = ref([
-    {
-        id: 1,
-        title: 'Important Update for Monday',
-        announcement: 'Please remember that our class will be held in Lab A on Monday due to maintenance in the regular classroom.',
-        description: 'This is a temporary change. We will return to our usual room on Tuesday. Make sure to bring your lab notebooks.',
-        deadline: new Date(2025, 4, 26, 17, 0, 0).toISOString(), // May 26, 2025 5:00 PM
-        published_at: new Date(2025, 4, 20, 10, 30, 0).toISOString(), // April 20, 2025 10:30 AM
-    },
-    {
-        id: 2,
-        title: 'Upcoming Quiz on Chapter 3',
-        announcement: 'A quiz covering the material from Chapter 3 will be held next Wednesday. Make sure to review your notes and readings.',
-        description: 'The quiz will consist of multiple-choice and short answer questions. It will cover all topics discussed in Chapter 3.',
-        deadline: new Date(2025, 4, 28, 0, 0, 0).toISOString(), // May 28, 2025 Midnight
-        published_at: new Date(2025, 4, 19, 14, 0, 0).toISOString(), // April 19, 2025 2:00 PM
-    },
-    {
-        id: 3,
-        title: 'Reminder: Project Proposal Due Friday',
-        announcement: 'Don\'t forget that your project proposals are due this Friday by the end of the day.',
-        description: 'The proposal should include your project topic, objectives, and a brief outline of your methodology.',
-        deadline: new Date(2025, 4, 23, 23, 59, 59).toISOString(), // May 23, 2025 11:59 PM
-        published_at: new Date(2025, 4, 18, 9, 0, 0).toISOString(), // April 18, 2025 9:00 AM
-    },
-]);
+const props = defineProps({
+    announcements: {
+        type: Array,
+        default: () => []
+    }
+});
+
+console.log(props.announcements)
 
 const formatDate = (dateString) => {
     if (!dateString) {
@@ -39,7 +22,7 @@ const formatDate = (dateString) => {
     }
     try {
         const date = new Date(dateString);
-        return format(date, 'MMM dd, yyyy hh:mm a'); // Adjusted format to include year
+        return format(date, 'MMM dd, yyyy hh:mm a'); // Keep the adjusted format
     } catch (error) {
         // console.error('Error formatting date:', error);
         return 'Invalid Date';
@@ -50,17 +33,17 @@ const formatDate = (dateString) => {
 <template>
     <div>
         <h2 class="text-xl font-semibold mb-4">Teacher Announcements</h2>
-        <div v-if="dummyAnnouncements.length > 0">
-            <div v-for="announcement in dummyAnnouncements" :key="announcement.id"
+        <div v-if="props.announcements.length > 0">
+            <div v-for="announcement in props.announcements" :key="announcement.id"
                 class="bg-white shadow rounded-md p-6 mb-4">
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ announcement.title }}</h3>
-                <p class="text-gray-600 mb-4">{{ announcement.announcement }}</p>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ announcement.title_announcement }}</h3>
+                <p class="text-gray-600 mb-4">{{ announcement.description_announcement }}</p>
 
                 <div class="border-t border-gray-200 pt-4">
                     <div class="flex flex-wrap gap-4 text-sm text-gray-500">
                         <div>
                             <span class="font-medium">Deadline:</span>
-                            {{ formatDate(announcement.deadline) }}
+                            {{ formatDate(announcement.deadline_announcement) }}
                         </div>
                         <div>
                             <span class="font-medium">Published At:</span>
@@ -70,8 +53,13 @@ const formatDate = (dateString) => {
                 </div>
             </div>
         </div>
-        <div v-else class="text-gray-500">
-            No announcements yet.
+        <div v-else class="text-center py-12 bg-white rounded-lg shadow-sm">
+            <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                viewBox="0 0 24 24">
+                <path fill="currentColor"
+                    d="M12 8H4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h1v4a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-4h3l5 4V4zm3 7.6L13 14H4v-4h9l2-1.6zm6.5-3.6c0 1.71-.96 3.26-2.5 4V8c1.53.75 2.5 2.3 2.5 4" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No Announcements</h3>
         </div>
     </div>
 </template>

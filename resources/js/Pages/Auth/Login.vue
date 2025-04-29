@@ -61,7 +61,7 @@ const submit = () => {
                 </PrimaryBtn>
             </div>
 
-            <div
+            <!-- <div
                 class="py-3 flex items-center text-sm text-gray-800 before:flex-1 before:border-t before:border-gray-200 before:me-6 after:flex-1 after:border-t after:border-gray-200 after:ms-6">
                 OR
             </div>
@@ -70,7 +70,7 @@ const submit = () => {
                 <button type="button" class="w-full p-3 bg-blue-600 rounded text-white font-bold">
                     Activate Account
                 </button>
-            </div>
+            </div> -->
         </form>
     </AuthLayout>
 </template>

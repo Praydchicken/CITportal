@@ -60,6 +60,8 @@ class StudentScheduleController extends Controller
             ];
         });
 
+        // dd($classSchedule);
+
 
         // Return data to the frontend (Inertia)
         return Inertia::render('StudentDashboard/StudentSchedule', [

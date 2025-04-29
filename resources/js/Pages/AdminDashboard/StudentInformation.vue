@@ -47,6 +47,7 @@ const yearLevelFilter = ref(props.filters.year_level || '');
 const semesterFilter = ref(props.filters.semester || '');
 const sectionFilter = ref(props.filters.section || '');
 
+const selectedSchoolYear = ref(props.filters.school_year || '');
 
 const filteredSections = computed(() => {
   let filtered = props.sections;
@@ -55,8 +56,10 @@ const filteredSections = computed(() => {
     filtered = filtered.filter(section => section.year_level_id == yearLevelFilter.value);
   }
 
-  if (props.activeSchoolYear?.id) {
-    filtered = filtered.filter(section => section.school_year_id == props.activeSchoolYear.id);
+  // Use selected school year if any, otherwise use active school year
+  const schoolYearId = selectedSchoolYear.value || props.activeSchoolYear?.id;
+  if (schoolYearId) {
+    filtered = filtered.filter(section => section.school_year_id == schoolYearId);
   }
 
   if (semesterFilter.value) {
@@ -69,35 +72,35 @@ const filteredSections = computed(() => {
 
 // Watch for props.students changes and maintain the order
 watch(search, async (newSearch) => {
-  if(newSearch.length === 9 || newSearch.length === 0) {
-     router.get(route('admin.student.info'), {
-    search: newSearch,
-    year_level: yearLevelFilter.value,
-    semester: semesterFilter.value,
-    section: sectionFilter.value,
-  }, {
-    preserveState: true,
-    replace: true,
-    preserveScroll: true,
-    // Use replace to avoid cluttering browser history
-  });
+  if (newSearch.length === 9 || newSearch.length === 0) {
+    router.get(route('admin.student.info'), {
+      search: newSearch,
+      year_level: yearLevelFilter.value,
+      semester: semesterFilter.value,
+      section: sectionFilter.value,
+    }, {
+      preserveState: true,
+      replace: true,
+      preserveScroll: true,
+      // Use replace to avoid cluttering browser history
+    });
   }
 });
 
 const handleInputChange = () => {
-	search.value = search.value.replace(/\D/g, '').slice(0, 9)
+  search.value = search.value.replace(/\D/g, '').slice(0, 9)
 }
 
 
 watch(yearLevelFilter, async (newYearLevel) => {
   if (sectionFilter.value && newYearLevel) {
-        const isSectionValid = props.sections.some(
-            section => section.id == sectionFilter.value && section.year_level_id == newYearLevel
-        );
-        if (!isSectionValid) {
-            sectionFilter.value = '';
-        }
+    const isSectionValid = props.sections.some(
+      section => section.id == sectionFilter.value && section.year_level_id == newYearLevel
+    );
+    if (!isSectionValid) {
+      sectionFilter.value = '';
     }
+  }
   router.get(route('admin.student.info'), {
     search: search.value,
     year_level: newYearLevel,
@@ -113,13 +116,13 @@ watch(yearLevelFilter, async (newYearLevel) => {
 
 watch(semesterFilter, async (newSemester) => {
   if (sectionFilter.value && newSemester) {
-        const isSectionValid = props.sections.some(
-            section => section.id == sectionFilter.value && section.semester_id == newSemester
-        );
-        if (!isSectionValid) {
-            sectionFilter.value = '';
-        }
+    const isSectionValid = props.sections.some(
+      section => section.id == sectionFilter.value && section.semester_id == newSemester
+    );
+    if (!isSectionValid) {
+      sectionFilter.value = '';
     }
+  }
   router.get(route('admin.student.info'), {
     search: search.value,
     year_level: yearLevelFilter.value,
@@ -147,15 +150,29 @@ watch(sectionFilter, async (newSection) => {
   });
 });
 
-const resetFilters = () => {
-    search.value = '';           // Clear the search input
-    yearLevelFilter.value = '';  // Reset the year level filter
- // Reset the selected year level (for section dependency)
-    semesterFilter.value = ''; // Reset the semester filter
-    sectionFilter.value = '';    // Reset the section filter
+// Add watch for school year filter
+watch(selectedSchoolYear, async (newSchoolYear) => {
+  router.get(route('admin.student.info'), {
+    search: search.value,
+    year_level: yearLevelFilter.value,
+    semester: semesterFilter.value,
+    section: sectionFilter.value,
+    school_year: newSchoolYear,
+  }, {
+    preserveState: true,
+    preserveScroll: true,
+    replace: true,
+  });
+});
 
-    // Trigger a new Inertia GET request without any filter parameters
-    router.get(route('admin.student.info'), {}, { replace: true });
+const resetFilters = () => {
+  search.value = '';
+  yearLevelFilter.value = '';
+  semesterFilter.value = '';
+  sectionFilter.value = '';
+  selectedSchoolYear.value = ''; // Reset school year filter
+
+  router.get(route('admin.student.info'), {}, { replace: true });
 };
 
 const isModalOPen = ref(false);
@@ -371,8 +388,18 @@ const processNestedValue = (item, key) => {
 };
 
 
-console.log('Students Prop:', props.students); // Check the entire prop object
-console.log('Students Meta:', props.students.meta);
+// console.log('Students Prop:', props.students); 
+// console.log('Students Meta:', props.students.meta);
+
+// Add computed property for form sections
+const formFilteredSections = computed(() => {
+  if (!form.year_level_id) {
+    return [];
+  }
+  return sections.value.filter(section =>
+    section.year_level_id === parseInt(form.year_level_id)
+  );
+});
 </script>
 
 <template>
@@ -439,6 +466,19 @@ console.log('Students Meta:', props.students.meta);
         </button>
       </div>
       <div class="flex gap-4 items-center mt-3">
+        <!-- School Year Filter -->
+        <!-- <div>
+          <select v-model="selectedSchoolYear"
+            class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
+            <option value="">All School Years</option>
+            <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+              {{ year.school_year }}
+              <span v-if="year.id === activeSchoolYear?.id">(Active)</span>
+            </option>
+          </select>
+        </div> -->
+
+        <!-- Year level filter -->
         <div>
           <select id="year_level_filter" v-model="yearLevelFilter"
             class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">

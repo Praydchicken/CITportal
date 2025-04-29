@@ -29,19 +29,17 @@ class AdminAccountingSyncController extends Controller
                 $financialRecords = $response->json();
                 $recordCount = 0;
 
-                // Calculate current semester index (e.g., 3rd year 1st sem = 5th sem = index 4)
-                $currentSemesterIndex = (($student->year_level_id - 1) * 2) + ($student->semester_id - 1);
+                // Calculate the starting school year of the student based on their current year level
+                $currentYear = now()->year; // Get the current year
+                $studentStartYear = $currentYear - ($student->year_level_id - 1);
 
                 foreach ($financialRecords as $record) {
                     $recordSchoolYear = $record['school_year']; // e.g. "2022-2023"
                     $recordSemester = (int) $record['semester']; // 1 or 2
-
                     $recordYearStart = (int) explode('-', $recordSchoolYear)[0];
 
-                    // Calculate semester index from 1st year 1st sem (index 0)
-                    $recordSemesterIndex = (($recordYearStart - 2020) * 2) + ($recordSemester - 1);
-
-                    if ($recordSemesterIndex <= $currentSemesterIndex) {
+                    // Check if the record's school year is within the student's academic history
+                    if ($recordYearStart >= $studentStartYear) {
                         FinancialRecord::updateOrCreate(
                             [
                                 'student_number' => $studentNumber,
@@ -58,7 +56,7 @@ class AdminAccountingSyncController extends Controller
                         );
                         $recordCount++;
                     } else {
-                        $logs[] = "Skipped future record: {$record['school_year']} Sem {$record['semester']} (beyond current sem)";
+                        $logs[] = "Skipped older record: {$record['school_year']} Sem {$record['semester']} (before student's assumed start)";
                     }
                 }
 
@@ -80,14 +78,14 @@ class AdminAccountingSyncController extends Controller
         $request->input('search');
 
         $financialRecords = FinancialRecord::with([
-        'student_number',
-        'school_year',
-        'semester',
-        'tuition_fee',
-        'discount',
-        'adjustment',
-        'amount_paid',
-        'balance',
+            'student_number',
+            'school_year',
+            'semester',
+            'tuition_fee',
+            'discount',
+            'adjustment',
+            'amount_paid',
+            'balance',
 
         ])
             ->when($request->search, function ($query, $search) {
