@@ -40,7 +40,12 @@ class PostStudentInfoController extends Controller
                 }
             })
             ->when($request->search, function ($query, $search) {
-                return $query->where('student_number', 'like', '%' . $search . '%');
+                return $query->where(function ($q) use ($search) {
+                    $q->where('student_number', 'like', "%$search%")
+                      ->orWhere('first_name', 'like', "%$search%")
+                      ->orWhere('middle_name', 'like', "%$search%")
+                      ->orWhere('last_name', 'like', "%$search%");
+                });
             })
             ->when($request->year_level, function ($query, $yearLevel) {
                 return $query->where('year_level_id', $yearLevel);
