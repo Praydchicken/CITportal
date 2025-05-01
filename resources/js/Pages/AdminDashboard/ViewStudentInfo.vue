@@ -105,7 +105,7 @@ const promoteStudent = (studentNo, promotionType) => {
         </Teleport>
     
 
-        <div class="w-[100%] h-[40vh] flex gap-x-4">
+        <div class="w-[100%] h-auto flex gap-x-4">
             <!-- Initial profile picture -->
             <div class="card w-[40%] h-auto flex flex-col items-center justify-center gap-y-4 p-10">
                 <div class="bg-blue-200 rounded-full flex justify-center items-center w-[100px] h-[100px]">
@@ -113,6 +113,7 @@ const promoteStudent = (studentNo, promotionType) => {
                 </div>
 
                 <div class="flex flex-col items-center justify-center">
+                  <p class="font-bold mb-3">{{ props.studentInfo.first_name }} {{ props.studentInfo.middle_name }} {{ props.studentInfo.last_name }}</p>
                     <p class="font-medium">{{ props.studentInfo.student_no }}</p>
                     <p class="font-medium">BSIT - {{ props.studentInfo.year_level }}</p>
                 </div>
@@ -120,12 +121,6 @@ const promoteStudent = (studentNo, promotionType) => {
 
             <!-- Other Information -->
         <div class="card w-[60%] h-auto p-2">
-                <!-- Full Name -->
-                <div class="flex border-b border-gray-300 mb-3 p-4">
-                    <span class="w-40 font-bold">Full Name</span>
-                    <p class="flex-1">{{ props.studentInfo.first_name }} {{ props.studentInfo.middle_name }} {{ props.studentInfo.last_name }}</p>
-                </div>
-
                 <!-- Email -->
                 <div class="flex border-b border-gray-300 mb-3 p-4">
                     <span class="w-40 font-bold">Email</span>
@@ -203,7 +198,7 @@ const promoteStudent = (studentNo, promotionType) => {
                     <thead>
                         <tr class="bg-[#1a3047] text-white">
                             <th v-for="header in tableHeaders" :key="header.key" 
-                                class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                                class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wider">
                                 {{ header.label }}
                             </th>
                         </tr>
@@ -211,17 +206,17 @@ const promoteStudent = (studentNo, promotionType) => {
                     <tbody class="bg-white divide-y divide-gray-200">
                         <tr v-for="(subject, subIndex) in curriculumGroup.subjects" :key="subject.curriculum_id"
                             :class="subIndex % 2 === 0 ? 'bg-zinc-200' : 'bg-white'">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ subject.course_code }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ subject.subject_name }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ subject.lecture_units }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ subject.lab_units }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-900">
+                            <td class="px-3 py-4 text-sm text-gray-900">{{ subject.course_code }}</td>
+                            <td class="px-3 py-4 text-sm text-gray-900">{{ subject.subject_name }}</td>
+                            <td class="px-3 py-4 text-sm text-gray-900">{{ subject.lecture_units }}</td>
+                            <td class="px-3 py-4 text-sm text-gray-900">{{ subject.lab_units }}</td>
+                            <td class="px-3 py-4 text-sm text-gray-900">
                                 {{ Number(subject.lecture_units) + Number(subject.lab_units) }}
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-900">
+                            <td class="px-3 py-4 text-sm text-gray-900">
                                 {{ subject.gwa_equivalent ?? "No Record" }}
                             </td>
-                            <td class="px-6 py-4 text-sm" 
+                            <td class="px-3 py-4 text-sm" 
                                 :class="subject.grade_remarks === 'PASSED' ? 'text-green-500' : 'text-red-500'">
                                 {{ subject.grade_remarks ?? "No Record" }}
                             </td>
