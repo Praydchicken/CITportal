@@ -58,7 +58,7 @@ const deleteSchoolYear = (id) => {
 </script>
 
 <template>
-    <Head title="School Year Management" />
+    <Head title="School Year" />
 
     <AdminDashboardLayout>
         <div class="py-6">

@@ -192,6 +192,7 @@ const viewCourse = (studentGradeId) => {
 </script>
 
 <template>
+  <Head title="Student Grades" />
   <div class="relative">
     <Overlay :show="isModalOpen" @click="closeModal" />
 

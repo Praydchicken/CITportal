@@ -539,6 +539,7 @@ const filteredFacultyLoads = computed(() => {
 </script>
 
 <template>
+  <Head title="Faculty" />
   <div class="flex flex-col gap-6 p-6">
     <Teleport to="body">
       <Notification 
