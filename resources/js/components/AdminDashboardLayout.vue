@@ -34,6 +34,7 @@ const headerContent = computed(() => [
 </script>
 
 <template>
+  <Head title="Overview" />
   <div class="dashboard-container relative">
     <DashboardSideNav :links="adminLinks" :componentName="page.props.component"/>
     <main class="w-screen h-screen pl-[20%]">

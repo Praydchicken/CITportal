@@ -1,6 +1,6 @@
 <script setup>
 import DashboardLayout from '../../components/AdminDashboardLayout.vue';
-import { defineProps, reactive, watch } from "vue";
+import { defineProps, reactive, watch, computed } from "vue";
 import { router } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3' // or @inertiajs/react if using React
 import Notification from '../../components/Notification.vue';
@@ -91,9 +91,16 @@ const promoteStudent = (studentNo, promotionType) => {
   });
 };
 
+const fullName = computed(() => {
+  return [props.studentInfo.first_name, props.studentInfo.middle_name, props.studentInfo.last_name]
+    .filter(Boolean) // removes undefined/null/empty
+    .join(' ');
+});
+
 </script>
 
 <template>
+   <Head :title=fullName />
     <div class="relative">
          <!-- Notification component -->
         <Teleport to="body">

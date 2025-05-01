@@ -464,7 +464,7 @@ const formFilteredSections = computed(() => {
       </div>
       <div class="flex gap-4 items-center mt-3">
         <!-- School Year Filter -->
-        <!-- <div>
+        <div>
           <select v-model="selectedSchoolYear"
             class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
             <option value="">All School Years</option>
@@ -473,7 +473,7 @@ const formFilteredSections = computed(() => {
               <span v-if="year.id === activeSchoolYear?.id">(Active)</span>
             </option>
           </select>
-        </div> -->
+        </div>
 
         <!-- Year level filter -->
         <div>
@@ -550,15 +550,15 @@ const formFilteredSections = computed(() => {
     </div>
 
     <!-- Pagination -->
-    <div class="mt-6 flex items-center justify-between p-6">
+    <div class="mt-6 flex items-center justify-between p-6"  :class="{ 'pointer-events-none opacity-50': isModalOPen }">
       <div class="text-sm text-gray-700">
         Showing <span class="font-semibold">{{ students.from }}</span> to <span class="font-semibold">{{ students.to
           }}</span> of <span class="font-semibold">{{ students.total }}</span> students
       </div>
-      <nav class="relative z-0 rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+      <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination" >
         <Link v-if="students.currentPage > 1" :href="students.links.prev" preserve-scroll rel="prev"
           aria-label="Previous"
-          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10">
+          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path fill-rule="evenodd"
             d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
@@ -568,8 +568,8 @@ const formFilteredSections = computed(() => {
 
         <template v-for="(link, key) in students.links" :key="key">
           <Link v-if="link.url" :href="link.url" preserve-scroll :class="[
-            'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10',
-            { 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600': link.active },
+            'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-indigo-500',
+            { ' bg-indigo-50 border-indigo-500 text-indigo-600': link.active },
             key === 0 && students.currentPage === 1 ? 'rounded-l-md' : '',
             key === students.links.length - 1 && students.currentPage === students.lastPage ? 'rounded-r-md' : '',
           ]" :aria-current="link.active ? 'page' : null" v-html="link.label">
@@ -579,7 +579,7 @@ const formFilteredSections = computed(() => {
 
         <Link v-if="students.currentPage < students.lastPage" :href="students.links.next" preserve-scroll rel="next"
           aria-label="Next"
-          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:z-10">
+          class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </Link>
       </nav>
     </div>
