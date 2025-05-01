@@ -72,25 +72,17 @@ const filteredSections = computed(() => {
 
 // Watch for props.students changes and maintain the order
 watch(search, async (newSearch) => {
-  if (newSearch.length === 9 || newSearch.length === 0) {
-    router.get(route('admin.student.info'), {
-      search: newSearch,
-      year_level: yearLevelFilter.value,
-      semester: semesterFilter.value,
-      section: sectionFilter.value,
-    }, {
-      preserveState: true,
-      replace: true,
-      preserveScroll: true,
-      // Use replace to avoid cluttering browser history
-    });
-  }
+  router.get(route('admin.student.info'), {
+    search: newSearch,
+    year_level: yearLevelFilter.value,
+    semester: semesterFilter.value,
+    section: sectionFilter.value,
+  }, {
+    preserveState: true,
+    replace: true,
+    preserveScroll: true,
+  });
 });
-
-const handleInputChange = () => {
-  search.value = search.value.replace(/\D/g, '').slice(0, 9)
-}
-
 
 watch(yearLevelFilter, async (newYearLevel) => {
   if (sectionFilter.value && newYearLevel) {
@@ -373,10 +365,10 @@ const deleteStudent = (id) => {
 
 const tableHeaders = [
   { key: 'student_number', label: 'Student No.' },
-  { key: 'user.email', label: 'Email Address' },
-  { key: 'first_name', label: 'First Name' },
-  { key: 'middle_name', label: 'Middle Name' },
-  { key: 'last_name', label: 'Last Name' },
+  {key: 'full_name', label: 'Full Name' },
+  // { key: 'first_name', label: 'First Name' },
+  // { key: 'middle_name', label: 'Middle Name' },
+  // { key: 'last_name', label: 'Last Name' },
   { key: 'section.section', label: 'Section' },
   { key: 'year_level.year_level', label: 'Year Level' },
   { key: 'status.status_name', label: 'Status' }
@@ -384,6 +376,10 @@ const tableHeaders = [
 
 // Modify the ReusableTable component to handle nested properties
 const processNestedValue = (item, key) => {
+  if (key === 'full_name') {
+      const middle = item.middle_name ? ` ${item.middle_name}` : '';
+      return `${item.first_name}${middle} ${item.last_name}`;
+    }
   return key.split('.').reduce((obj, k) => obj?.[k], item) || 'N/A';
 };
 
@@ -403,6 +399,7 @@ const formFilteredSections = computed(() => {
 </script>
 
 <template>
+  <Head title="Student Information" />
   <div class="relative">
     <!-- Notification component -->
     <Teleport to="body">
@@ -455,7 +452,7 @@ const formFilteredSections = computed(() => {
       <div class="flex justify-between items-center">
         <!-- Search Input -->
         <form @submit.prevent>
-          <input v-model="search" @input=handleInputChange type="text" placeholder="Search Student No..." maxlength="9"
+          <input v-model="search" type="text" placeholder="Search..." maxlength="9"
             class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[300px]">
         </form>
 
@@ -534,7 +531,7 @@ const formFilteredSections = computed(() => {
           <tr v-for="(student, index) in students.data" :key="student.id"
             :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
             <td v-for="header in tableHeaders" :key="header.key"
-              class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+              class="px-6 py-4  text-sm text-gray-900">
               {{ processNestedValue(student, header.key) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
