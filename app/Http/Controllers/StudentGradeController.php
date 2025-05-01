@@ -32,7 +32,7 @@ class StudentGradeController extends Controller
 
         // Load school years
         $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
-        $activeSchoolYear = SchoolYear::where('school_year', '2025-2026')->first() ?? $schoolYears->first();
+        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
 
         // Load grades with all necessary relationships
         $grades = StudentGrade::with(['student', 'student.section', 'curriculum'])
@@ -41,7 +41,7 @@ class StudentGradeController extends Controller
 
         return Inertia::render('AdminDashboard/StudentGrade', [
             'title' => 'Student Grade',
-            'students' => $students,
+            'students' => $students,    
             'curricula' => $curricula,
             'sections' => $sections,
             'activeSchoolYear' => $activeSchoolYear,
