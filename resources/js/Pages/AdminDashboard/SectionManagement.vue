@@ -327,58 +327,66 @@ const showNotification = (message, type = 'success') => {
 </script>
 
 <template>
+    <Head title="Sections" />
+    <div v-if="activeSchoolYear"
+        class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                    fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm font-medium">
+                    Active School Year: <span class="font-bold">{{ activeSchoolYear.school_year }}</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    
     <div class="relative">
         <!-- Replace existing Notification with Teleport -->
         <Teleport to="body">
-            <Notification 
-                :show="notification.show" 
-                :message="notification.message" 
-                :type="notification.type" 
-            />
+            <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
         </Teleport>
-        
+
         <Overlay :show="isModalOpen" @click="closeModal" />
         <div class="flex flex-col gap-4 mb-4">
             <!-- Filter dropdowns -->
             <div class="flex items-center gap-4">
-                <select
-                    v-model="selectedYearLevel"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500"
-                >
+                <select v-model="selectedYearLevel"
+                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
                     <option value="">All Year Levels</option>
                     <option v-for="yearLevel in uniqueYearLevels" :key="yearLevel" :value="yearLevel">
                         {{ yearLevel }}
                     </option>
                 </select>
 
-                <select
-                    v-model="selectedSectionFilter"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500"
-                >
+                <select v-model="selectedSectionFilter"
+                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
                     <option value="">All Sections</option>
                     <option v-for="section in uniqueSections" :key="section" :value="section">
                         {{ section }}
                     </option>
                 </select>
 
-                <select
-                    v-model="selectedSchoolYear"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500"
-                >
+                <!-- <select v-model="selectedSchoolYear"
+                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
                     <option value="">All School Years</option>
                     <option v-for="schoolYear in uniqueSchoolYears" :key="schoolYear" :value="schoolYear">
                         {{ schoolYear }}
                     </option>
-                </select>
+                </select> -->
 
-                <button 
-                    @click="() => { selectedYearLevel = ''; selectedSectionFilter = ''; selectedSchoolYear = ''; }"
-                    class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md px-3 py-2 text-sm"
-                >
+                <button @click="() => { selectedYearLevel = ''; selectedSectionFilter = ''; selectedSchoolYear = ''; }"
+                    class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md px-3 py-2 text-sm">
                     Clear Filters
                 </button>
             </div>
-            
+
             <!-- Add Section Button -->
             <div class="flex justify-end">
                 <button @click="openAddModal"
@@ -389,12 +397,8 @@ const showNotification = (message, type = 'success') => {
         </div>
 
         <!-- Reusable Table Component -->
-        <ReusableTable 
-            :headers="tableHeaders" 
-            :data="filteredSections" 
-            :actions="true"
-            :action-buttons="actionButtons" 
-        />
+        <ReusableTable :headers="tableHeaders" :data="filteredSections" :actions="true"
+            :action-buttons="actionButtons" />
 
         <!-- Reusable Modal Component -->
         <ReusableModal :show="isModalOpen" :title="isEditMode ? 'Edit Section' : 'Add Section'" :loading="loading"
@@ -405,13 +409,8 @@ const showNotification = (message, type = 'success') => {
                 <!-- Section Name -->
                 <div>
                     <label for="section" class="block text-sm font-medium text-gray-700 mb-1">Section Name</label>
-                    <input 
-                        id="section" 
-                        type="text" 
-                        v-model="form.section"
-                        class="input-field-add-student w-full"
-                        :class="{ 'border-red-500': form.errors.section }"
-                    >
+                    <input id="section" type="text" v-model="form.section" class="input-field-add-student w-full"
+                        :class="{ 'border-red-500': form.errors.section }">
                     <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">
                         {{ form.errors.section }}
                     </p>
@@ -420,12 +419,8 @@ const showNotification = (message, type = 'success') => {
                 <!-- Year Level -->
                 <div>
                     <label for="year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-                    <select 
-                        id="year_level" 
-                        v-model="form.year_level_id"
-                        class="input-field-add-student w-full"
-                        :class="{ 'border-red-500': form.errors.year_level_id }"
-                    >
+                    <select id="year_level" v-model="form.year_level_id" class="input-field-add-student w-full"
+                        :class="{ 'border-red-500': form.errors.year_level_id }">
                         <option value="" disabled selected>Select Year Level</option>
                         <option v-for="option in yearLevelOptions" :key="option.value" :value="option.value">
                             {{ option.label }}
@@ -439,37 +434,24 @@ const showNotification = (message, type = 'success') => {
                 <!-- School Year (Disabled) -->
                 <div>
                     <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
-                    <input 
-                        id="school_year" 
-                        type="text" 
-                        :value="props.activeSchoolYear?.school_year"
-                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed"
-                        disabled
-                    >
+                    <input id="school_year" type="text" :value="props.activeSchoolYear?.school_year"
+                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed" disabled>
                 </div>
 
                 <!-- Status (Disabled) -->
                 <div>
                     <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <input 
-                        id="status" 
-                        type="text" 
-                        :value="props.activeSchoolYear?.school_year_status"
-                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed"
-                        disabled
-                    >
+                    <input id="status" type="text" :value="props.activeSchoolYear?.school_year_status"
+                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed" disabled>
                 </div>
 
                 <!-- Minimum Students -->
                 <div>
-                    <label for="min_students" class="block text-sm font-medium text-gray-700 mb-1">Minimum Students</label>
-                    <input 
-                        id="min_students" 
-                        type="number" 
-                        v-model="form.minimum_number_students"
+                    <label for="min_students" class="block text-sm font-medium text-gray-700 mb-1">Minimum
+                        Students</label>
+                    <input id="min_students" type="number" v-model="form.minimum_number_students"
                         class="input-field-add-student w-full"
-                        :class="{ 'border-red-500': form.errors.minimum_number_students }"
-                    >
+                        :class="{ 'border-red-500': form.errors.minimum_number_students }">
                     <p v-if="form.errors.minimum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.minimum_number_students }}
                     </p>
@@ -477,14 +459,11 @@ const showNotification = (message, type = 'success') => {
 
                 <!-- Maximum Students -->
                 <div>
-                    <label for="max_students" class="block text-sm font-medium text-gray-700 mb-1">Maximum Students</label>
-                    <input 
-                        id="max_students" 
-                        type="number" 
-                        v-model="form.maximum_number_students"
+                    <label for="max_students" class="block text-sm font-medium text-gray-700 mb-1">Maximum
+                        Students</label>
+                    <input id="max_students" type="number" v-model="form.maximum_number_students"
                         class="input-field-add-student w-full"
-                        :class="{ 'border-red-500': form.errors.maximum_number_students }"
-                    >
+                        :class="{ 'border-red-500': form.errors.maximum_number_students }">
                     <p v-if="form.errors.maximum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.maximum_number_students }}
                     </p>
