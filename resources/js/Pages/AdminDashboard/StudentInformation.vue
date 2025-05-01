@@ -11,7 +11,7 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
 import { useForm } from '@inertiajs/vue3'
 import { defineProps } from "vue";
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import Swal from 'sweetalert2';
@@ -49,19 +49,28 @@ const sectionFilter = ref(props.filters.section || '');
 
 const selectedSchoolYear = ref(props.filters.school_year || '');
 
+onMounted(() => {
+  if (!selectedSchoolYear.value) {
+    selectedSchoolYear.value = props.activeSchoolYear?.id ?? null;
+  }
+});
+
 const filteredSections = computed(() => {
   let filtered = props.sections;
 
+  // Filter by year level if selected
   if (yearLevelFilter.value) {
     filtered = filtered.filter(section => section.year_level_id == yearLevelFilter.value);
   }
 
   // Use selected school year if any, otherwise use active school year
   const schoolYearId = selectedSchoolYear.value || props.activeSchoolYear?.id;
+  
   if (schoolYearId) {
     filtered = filtered.filter(section => section.school_year_id == schoolYearId);
   }
 
+  // Filter by semester if selected
   if (semesterFilter.value) {
     filtered = filtered.filter(section => section.semester_id == semesterFilter.value);
   }
@@ -77,6 +86,7 @@ watch(search, async (newSearch) => {
     year_level: yearLevelFilter.value,
     semester: semesterFilter.value,
     section: sectionFilter.value,
+    school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
   }, {
     preserveState: true,
     replace: true,
@@ -98,6 +108,7 @@ watch(yearLevelFilter, async (newYearLevel) => {
     year_level: newYearLevel,
     semester: semesterFilter.value,
     section: sectionFilter.value,
+    school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
   }, {
     preserveScroll: true,
     preserveState: true,
@@ -120,6 +131,7 @@ watch(semesterFilter, async (newSemester) => {
     year_level: yearLevelFilter.value,
     semester: newSemester,
     section: sectionFilter.value,
+    school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
   }, {
     preserveState: true,
     preserveScroll: true,
@@ -134,6 +146,7 @@ watch(sectionFilter, async (newSection) => {
     year_level: yearLevelFilter.value,
     semester: semesterFilter.value,
     section: newSection,
+    school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
   }, {
     preserveState: true,
     preserveScroll: true,
@@ -149,7 +162,7 @@ watch(selectedSchoolYear, async (newSchoolYear) => {
     year_level: yearLevelFilter.value,
     semester: semesterFilter.value,
     section: sectionFilter.value,
-    school_year: newSchoolYear,
+    school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
   }, {
     preserveState: true,
     preserveScroll: true,
@@ -162,10 +175,15 @@ const resetFilters = () => {
   yearLevelFilter.value = '';
   semesterFilter.value = '';
   sectionFilter.value = '';
-  selectedSchoolYear.value = ''; // Reset school year filter
+  selectedSchoolYear.value = props.activeSchoolYear?.id; // ✅ set default
 
-  router.get(route('admin.student.info'), {}, { replace: true });
+  router.get(route('admin.student.info'), {
+    school_year: props.activeSchoolYear?.id, // ✅ retain school year in URL
+  }, {
+    replace: true,
+  });
 };
+
 
 const isModalOPen = ref(false);
 
@@ -467,7 +485,6 @@ const formFilteredSections = computed(() => {
         <div>
           <select v-model="selectedSchoolYear"
             class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
-            <option value="">All School Years</option>
             <option v-for="year in schoolYears" :key="year.id" :value="year.id">
               {{ year.school_year }}
               <span v-if="year.id === activeSchoolYear?.id">(Active)</span>

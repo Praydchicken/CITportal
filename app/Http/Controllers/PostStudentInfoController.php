@@ -19,65 +19,67 @@ use Illuminate\Support\Facades\Log;
 class PostStudentInfoController extends Controller
 {
     public function index(Request $request)
-    {
-        // Get active school year but don't fail if none exists
-        $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
-        
-        $students = Student::with([
-                'section',
-                'yearLevel',
-                'user',
-                'status',
-                'schoolYear',
-                'semester'
-            ])
-            ->when($request->school_year, function ($query, $schoolYear) {
-                return $query->where('school_year_id', $schoolYear);
-            }, function ($query) use ($activeSchoolYear) {
-                // If no school year filter is applied, default to active school year if it exists
-                if ($activeSchoolYear) {
-                    return $query->where('school_year_id', $activeSchoolYear->id);
-                }
-            })
-            ->when($request->search, function ($query, $search) {
-                return $query->where(function ($q) use ($search) {
-                    $q->where('student_number', 'like', "%$search%")
-                      ->orWhere('first_name', 'like', "%$search%")
-                      ->orWhere('middle_name', 'like', "%$search%")
-                      ->orWhere('last_name', 'like', "%$search%");
-                });
-            })
-            ->when($request->year_level, function ($query, $yearLevel) {
-                return $query->where('year_level_id', $yearLevel);
-            })
-            ->when($request->semester, function ($query, $semester) {
-                return $query->where('semester_id', $semester);
-            })
-            ->when($request->section, function ($query, $section) {
-                return $query->where('section_id', $section);
-            })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+{
+    // Get the active school year, but don't fail if none exists
+    $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
 
-        $sections = Section::all();
-        $yearLevels = YearLevel::all();
-        $studentStatuses = StudentStatus::all();
-        $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
-        $semesters = Semester::all();
+    // Use the active school year for default view but allow filtering by other school years
+    $selectedSchoolYearId = $request->school_year ?? $activeSchoolYear?->id;
 
-        return Inertia::render('AdminDashboard/StudentInformation', [
-            'title' => 'Student Information',
-            'students' => $students,
-            'sections' => $sections,
-            'yearLevels' => $yearLevels,
-            'studentStatuses' => $studentStatuses,
-            'activeSchoolYear' => $activeSchoolYear,
-            'schoolYears' => $schoolYears,
-            'semesters' => $semesters,
-            'filters' => $request->only(['search', 'year_level', 'semester', 'section', 'school_year']),
-        ]);
-    }
+    // Fetch students with conditional filters
+    $students = Student::with([
+        'section',
+        'yearLevel',
+        'user',
+        'status',
+        'schoolYear',
+        'semester'
+    ])
+    ->when($selectedSchoolYearId, function ($query, $schoolYearId) {
+        return $query->where('school_year_id', $schoolYearId);
+    })
+    ->when($request->search, function ($query, $search) {
+        return $query->where(function ($q) use ($search) {
+            $q->where('student_number', 'like', "%$search%")
+              ->orWhere('first_name', 'like', "%$search%")
+              ->orWhere('middle_name', 'like', "%$search%")
+              ->orWhere('last_name', 'like', "%$search%");
+        });
+    })
+    ->when($request->year_level, function ($query, $yearLevel) {
+        return $query->where('year_level_id', $yearLevel);
+    })
+    ->when($request->semester, function ($query, $semester) {
+        return $query->where('semester_id', $semester);
+    })
+    ->when($request->section, function ($query, $section) {
+        return $query->where('section_id', $section);
+    })
+    ->latest()
+    ->paginate(10)
+    ->withQueryString();
+
+    // Fetch supporting data for the filters
+    $sections = Section::all();
+    $yearLevels = YearLevel::all();
+    $studentStatuses = StudentStatus::all();
+    $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
+    $semesters = Semester::all();
+
+    // Return the view with the filtered students and data
+    return Inertia::render('AdminDashboard/StudentInformation', [
+        'title' => 'Student Information',
+        'students' => $students,
+        'sections' => $sections,
+        'yearLevels' => $yearLevels,
+        'studentStatuses' => $studentStatuses,
+        'activeSchoolYear' => $activeSchoolYear,
+        'schoolYears' => $schoolYears,
+        'semesters' => $semesters,
+        'filters' => $request->only(['search', 'year_level', 'semester', 'section', 'school_year']),
+    ]);
+}
+
     public function store(Request $request)
     {
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
