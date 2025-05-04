@@ -575,18 +575,18 @@ const getTotalUnits = (curriculum) => {
       <table class="min-w-full divide-y divide-gray-200 ">
         <thead>
           <tr>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Year Level</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047] rounded-tl-lg">Year Level</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Semester</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Course Code</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Subject Name</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Lecture Units</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Lab Units</th>
             <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Total Units</th>
-            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">Actions</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047] rounded-tr-lg">Actions</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="curriculum in filteredCurriculums" :key="curriculum.id">
+          <tr v-for="(curriculum, index) in filteredCurriculums" :key="curriculum.id" :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.year_level?.year_level }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.semester?.semester_name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ curriculum.course_code }}</td>
