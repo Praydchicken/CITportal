@@ -38,8 +38,8 @@ const props = defineProps({
   }
 });
 
-console.log(props.schoolYears);
-
+// console.log(props.schoolYears);
+// console.log(props.teachers)
 
 const headerContent = computed(() => [
   {
@@ -50,17 +50,17 @@ const headerContent = computed(() => [
 ]);
 
 const searchQuery = ref('');
-const filterSchoolYear = ref('');
+const filterSchoolYear = ref(props.schoolYears?.find(y => y.school_year_status === 'Active')?.id || '');
 
 // Add computed property for filtered admins
 const filteredAdmins = computed(() => {
   let filtered = props.teachers;
-  
+
   // Apply school year filter
   if (filterSchoolYear.value) {
     filtered = filtered.filter(admin => admin.school_year_id == filterSchoolYear.value);
   }
-  
+
   // Apply search query filter
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
@@ -73,9 +73,11 @@ const filteredAdmins = computed(() => {
       );
     });
   }
-  
+
   return filtered;
 });
+
+
 
 const selectedFaculty = ref(null);
 
@@ -251,7 +253,7 @@ const scheduleForm = useForm({
   semester_id: '',
   day: '',
   start_time: '',
-  end_time: ''
+  end_time: '',
 });
 
 const openScheduleModal = (faculty) => {
@@ -267,7 +269,7 @@ const closeScheduleModal = () => {
 
 const submitScheduleForm = () => {
   loading.value = true;
-  
+
   // Submit the faculty load directly with all data
   scheduleForm.post('/admin/faculty/load', {
     preserveScroll: true,
@@ -275,11 +277,11 @@ const submitScheduleForm = () => {
       const updatedFaculty = response?.props?.teachers?.find(
         teacher => teacher.id === selectedFaculty.value.id
       );
-      
+
       if (updatedFaculty) {
         selectedFaculty.value = JSON.parse(JSON.stringify(updatedFaculty));
       }
-      
+
       showNotification('Schedule assigned successfully');
       closeScheduleModal();
     },
@@ -305,12 +307,26 @@ watch(selectedFaculty, (newValue) => {
 
 // Computed property for filtered sections
 const filteredSections = computed(() => {
+  // If no year level selected, return empty array
   if (!scheduleForm.year_level_id) return [];
-  if (scheduleForm.year_level_id === 'all') return props.sections;
-  
-  return props.sections.filter(section => 
-    section.year_level_id === parseInt(scheduleForm.year_level_id)
-  );
+
+  // Get active school year ID
+  const activeYearId = activeSchoolYear.value?.id;
+  if (!activeYearId) {
+    console.warn('No active school year set');
+    return [];
+  }
+
+  // Filter sections by year level and active school year
+  const filtered = props.sections.filter(section => {
+    return (
+      section.year_level_id === parseInt(scheduleForm.year_level_id) &&
+      section.school_year_id === activeYearId
+    );
+  });
+
+  console.log('Filtered sections:', filtered); // Debug log
+  return filtered;
 });
 
 // Reset section when year level changes
@@ -324,10 +340,10 @@ const filteredCurricula = computed(() => {
     console.log('No year level or semester selected');
     return [];
   }
-  
+
   const yearLevelId = parseInt(scheduleForm.year_level_id);
   const semesterId = parseInt(scheduleForm.semester_id);
-  
+
   console.log('Filtering curricula:', {
     yearLevelId,
     semesterId,
@@ -337,14 +353,14 @@ const filteredCurricula = computed(() => {
   const filtered = props.curricula.filter(curriculum => {
     const currYearLevelId = parseInt(curriculum.year_level_id);
     const currSemesterId = parseInt(curriculum.semester_id);
-    
+
     console.log('Checking curriculum:', {
       id: curriculum.id,
       name: curriculum.subject_name,
       yearLevel: { curr: currYearLevelId, form: yearLevelId, match: currYearLevelId === yearLevelId },
       semester: { curr: currSemesterId, form: semesterId, match: currSemesterId === semesterId }
     });
-    
+
     return currYearLevelId === yearLevelId && currSemesterId === semesterId;
   });
 
@@ -372,7 +388,7 @@ const formatTime = (time) => {
     const date = new Date();
     date.setHours(parseInt(hours));
     date.setMinutes(parseInt(minutes));
-    return date.toLocaleTimeString('en-US', { 
+    return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
@@ -412,7 +428,7 @@ const closeEditLoadModal = () => {
 
 const submitEditLoadForm = () => {
   if (!selectedLoad.value) return;
-  
+
   loading.value = true;
   scheduleForm.put(`/admin/faculty/load/${selectedLoad.value.id}`, {
     preserveScroll: true,
@@ -420,11 +436,11 @@ const submitEditLoadForm = () => {
       const updatedFaculty = response?.props?.teachers?.find(
         teacher => teacher.id === selectedFaculty.value.id
       );
-      
+
       if (updatedFaculty) {
         selectedFaculty.value = JSON.parse(JSON.stringify(updatedFaculty));
       }
-      
+
       showNotification('Schedule updated successfully');
       closeEditLoadModal();
     },
@@ -460,11 +476,11 @@ const deleteSchedule = (load) => {
           const updatedFaculty = response?.props?.teachers?.find(
             teacher => teacher.id === selectedFaculty.value.id
           );
-          
+
           if (updatedFaculty) {
             selectedFaculty.value = JSON.parse(JSON.stringify(updatedFaculty));
           }
-          
+
           showNotification('Schedule deleted successfully');
         },
         onError: () => {
@@ -523,78 +539,96 @@ const filterSection = ref('');
 const filterYearLevel = ref('');
 
 // Computed Property for Filtered Faculty Loads
+// Computed Property for Filtered Faculty Loads
 const filteredFacultyLoads = computed(() => {
   if (!selectedFaculty.value?.faculty_loads) {
     return [];
   }
 
   return selectedFaculty.value.faculty_loads.filter(load => {
-    const semesterMatch = !filterSemester.value || load.semester_id == filterSemester.value; // Loose compare
-    const yearLevelMatch = !filterYearLevel.value || load.year_level_id == filterYearLevel.value; // Loose compare
-    const sectionMatch = !filterSection.value || load.section_id == filterSection.value; // Loose compare
-    
+    const semesterMatch = !filterSemester.value || load.semester_id == filterSemester.value;
+    const yearLevelMatch = !filterYearLevel.value || load.year_level_id == filterYearLevel.value;
+    const sectionMatch = !filterSection.value || load.section_id == filterSection.value;
+
     return semesterMatch && yearLevelMatch && sectionMatch;
   });
+});
+
+// Computed property for unique sections in faculty loads
+const uniqueSections = computed(() => {
+  if (!selectedFaculty.value?.faculty_loads) return [];
+
+  const sectionsMap = {};
+  selectedFaculty.value.faculty_loads.forEach(load => {
+    if (load.section && !sectionsMap[load.section.id]) {
+      sectionsMap[load.section.id] = load.section;
+    }
+  });
+
+  return Object.values(sectionsMap);
 });
 </script>
 
 <template>
-  <Head title="Faculty" />
   <div class="flex flex-col gap-6 p-6">
     <Teleport to="body">
-      <Notification 
-        :show="notification.show" 
-        :message="notification.message" 
-        :type="notification.type" 
-      />
+      <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
     </Teleport>
 
     <Overlay :show="isModalOpen" @click="closeModal" />
+
+    <!-- Active School Year Banner -->
+    <div v-if="activeSchoolYear"
+      class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+            fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm font-medium">
+            Active School Year: <span class="font-bold">{{ activeSchoolYear.school_year }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
 
     <!-- Top Section - Faculty Table -->
     <div class="bg-white rounded-lg shadow-md p-6">
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-[#1a3047]">Faculty List</h2>
-        <button 
-          @click="openModal()"
-          class="bg-[#1a3047] text-white px-4 py-2 rounded-md hover:bg-[#2a4057] transition-colors"
-        >
+        <button @click="openModal()"
+          class="bg-[#1a3047] text-white px-4 py-2 rounded-md hover:bg-[#2a4057] transition-colors">
           Add Faculty
         </button>
       </div>
 
       <!-- Search and Filter Section -->
       <div class="mb-6 flex justify-start gap-4">
-        <input 
-          v-model="searchQuery"
-          type="text" 
-          placeholder="Search faculty..." 
-          class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]"
-        >
-        <select 
-          v-model="filterSchoolYear"
-          class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]"
-        >
+        <input v-model="searchQuery" type="text" placeholder="Search faculty..."
+          class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]">
+        <select v-model="filterSchoolYear"
+          class="w-1/3 p-2 border border-gray-300 rounded-md focus:outline-none focus:border-[#1a3047]">
           <option value="">All School Years</option>
-          <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+          <option v-for="year in schoolYears" :key="year.id" :value="year.id"
+            :selected="year.school_year_status === 'Active'">
             {{ year.school_year }} {{ year.school_year_status === 'Active' ? '(Active)' : '' }}
           </option>
         </select>
       </div>
 
       <!-- Faculty Table -->
-      <ReusableTable 
-        :headers="tableHeaders"
-        :data="filteredAdmins"
-        :actions="true"
-        :action-buttons="actionButtons"
-      />
+      <ReusableTable :headers="tableHeaders" :data="filteredAdmins" :actions="true" :action-buttons="actionButtons" />
     </div>
 
     <!-- Bottom Section - Faculty Preview -->
     <div v-if="selectedFaculty" class="bg-white rounded-lg shadow p-6 mb-6">
       <h2 class="text-2xl font-bold text-[#1a3047] mb-6">Faculty Preview</h2>
-      
+
       <div class="grid grid-cols-2 gap-8 mb-6">
         <div class="flex items-center gap-6">
           <div class="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">
@@ -605,7 +639,8 @@ const filteredFacultyLoads = computed(() => {
           <div class="space-y-4">
             <div>
               <p class="text-gray-600">Full Name</p>
-              <p class="font-medium">{{ selectedFaculty.first_name }} {{ selectedFaculty.middle_name }} {{ selectedFaculty.last_name }}</p>
+              <p class="font-medium">{{ selectedFaculty.first_name }} {{ selectedFaculty.middle_name }} {{
+                selectedFaculty.last_name }}</p>
             </div>
             <div>
               <p class="text-gray-600">Phone Number</p>
@@ -624,7 +659,8 @@ const filteredFacultyLoads = computed(() => {
           </div>
         </div>
         <div class="flex justify-end">
-          <button @click="openScheduleModal(selectedFaculty)" class="bg-[#1a3047] text-white px-3 py-1.5 text-sm rounded hover:bg-[#2a4057] transition-colors">
+          <button @click="openScheduleModal(selectedFaculty)"
+            class="bg-[#1a3047] text-white px-3 py-1.5 text-sm rounded hover:bg-[#2a4057] transition-colors">
             Assign Schedule
           </button>
         </div>
@@ -639,11 +675,8 @@ const filteredFacultyLoads = computed(() => {
           <!-- Semester Filter -->
           <div class="flex-1 min-w-[150px]">
             <label for="filterSemester" class="block text-sm font-medium text-gray-700 mb-1">Filter by Semester</label>
-            <select 
-              id="filterSemester"
-              v-model="filterSemester"
-              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500"
-            >
+            <select id="filterSemester" v-model="filterSemester"
+              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500">
               <option value="">All Semesters</option>
               <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
                 {{ semester.semester_name }}
@@ -653,12 +686,10 @@ const filteredFacultyLoads = computed(() => {
 
           <!-- Year Level Filter -->
           <div class="flex-1 min-w-[150px]">
-            <label for="filterYearLevel" class="block text-sm font-medium text-gray-700 mb-1">Filter by Year Level</label>
-            <select 
-              id="filterYearLevel"
-              v-model="filterYearLevel"
-              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500"
-            >
+            <label for="filterYearLevel" class="block text-sm font-medium text-gray-700 mb-1">Filter by Year
+              Level</label>
+            <select id="filterYearLevel" v-model="filterYearLevel"
+              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500">
               <option value="">All Year Levels</option>
               <option v-for="year in yearLevels" :key="year.id" :value="year.id">
                 {{ year.year_level }}
@@ -669,39 +700,30 @@ const filteredFacultyLoads = computed(() => {
           <!-- Section Filter -->
           <div class="flex-1 min-w-[150px]">
             <label for="filterSection" class="block text-sm font-medium text-gray-700 mb-1">Filter by Section</label>
-            <select 
-              id="filterSection"
-              v-model="filterSection"
-              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500"
-            >
+            <select id="filterSection" v-model="filterSection"
+              class="w-full bg-white p-2 text-sm rounded border border-gray-300 focus:outline-none focus:border-blue-500">
               <option value="">All Sections</option>
-              <option v-for="section in sections" :key="section.id" :value="section.id">
-                {{ section.section }} ({{ section.year_level }})
+              <option v-for="section in uniqueSections" :key="section.id" :value="section.id">
+                {{ section.section }}
               </option>
             </select>
           </div>
         </div>
 
         <!-- Teaching Load Display (Using filtered list) -->
-        <div v-if="filteredFacultyLoads.length > 0" 
-             class="grid grid-cols-1 gap-4">
-          <div v-for="load in filteredFacultyLoads" 
-               :key="load.id" 
-               class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+        <div v-if="filteredFacultyLoads.length > 0" class="grid grid-cols-1 gap-4">
+          <div v-for="load in filteredFacultyLoads" :key="load.id"
+            class="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
             <!-- Existing Load Details Display Structure -->
             <div class="flex justify-between mb-4">
               <h4 class="font-medium text-gray-900">Teaching Load Details</h4>
               <div class="flex gap-2">
-                <button 
-                  @click="openEditLoadModal(load)"
-                  class="bg-[#559de6] text-white px-3 py-1 text-sm rounded hover:bg-[#4589d1] transition-colors"
-                >
+                <button @click="openEditLoadModal(load)"
+                  class="bg-[#559de6] text-white px-3 py-1 text-sm rounded hover:bg-[#4589d1] transition-colors">
                   Edit Schedule
                 </button>
-                <button 
-                  @click="deleteSchedule(load)"
-                  class="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600 transition-colors"
-                >
+                <button @click="deleteSchedule(load)"
+                  class="bg-red-500 text-white px-3 py-1 text-sm rounded hover:bg-red-600 transition-colors">
                   Delete
                 </button>
               </div>
@@ -765,23 +787,14 @@ const filteredFacultyLoads = computed(() => {
     </div>
 
     <!-- Add/Edit Faculty Modal -->
-    <ReusableModal 
-      :show="isModalOpen"
-      :title="isEditMode ? 'Edit Faculty' : 'Add Faculty'"
-      :loading="loading"
-      :submit-button-text="isEditMode ? 'Update Faculty' : 'Add Faculty'"
-      @close="closeModal"
-      @submit="submitForm"
-    >
+    <ReusableModal :show="isModalOpen" :title="isEditMode ? 'Edit Faculty' : 'Add Faculty'" :loading="loading"
+      :submit-button-text="isEditMode ? 'Update Faculty' : 'Add Faculty'" @close="closeModal" @submit="submitForm">
       <template #header>
         <div class="flex justify-between items-center">
           <h3 class="text-lg font-semibold text-gray-900">
             {{ isEditMode ? 'Edit Faculty' : 'Add Faculty' }}
           </h3>
-          <button
-            @click="closeModal"
-            class="text-gray-400 hover:text-gray-500 focus:outline-none"
-          >
+          <button @click="closeModal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
             <font-awesome-icon :icon="['fas', 'xmark']" class="text-xl" />
           </button>
         </div>
@@ -789,20 +802,18 @@ const filteredFacultyLoads = computed(() => {
 
       <!-- Form Grid Container -->
       <div class="mb-4 bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
-        <p>Note: A password will be automatically generated using the teacher's first and last name. For example, for "John Doe", the password will be "johndoe".</p>
+        <p>Note: A password will be automatically generated using the teacher's first and last name. For example, for
+          "John
+          Doe", the password will be "johndoe".</p>
       </div>
-      
+
       <div class="grid grid-cols-3 gap-4">
         <!-- First Row -->
         <div>
           <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-          <input 
-            id="first_name"
-            type="text" 
+          <input id="first_name" type="text"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.first_name }"
-            v-model="form.first_name"
-          >
+            :class="{ 'border-red-500': form.errors.first_name }" v-model="form.first_name">
           <p v-if="form.errors.first_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.first_name }}
           </p>
@@ -810,13 +821,9 @@ const filteredFacultyLoads = computed(() => {
 
         <div>
           <label for="middle_name" class="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
-          <input 
-            id="middle_name"
-            type="text" 
+          <input id="middle_name" type="text"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.middle_name }"
-            v-model="form.middle_name"
-          >
+            :class="{ 'border-red-500': form.errors.middle_name }" v-model="form.middle_name">
           <p v-if="form.errors.middle_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.middle_name }}
           </p>
@@ -824,13 +831,9 @@ const filteredFacultyLoads = computed(() => {
 
         <div>
           <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-          <input 
-            id="last_name"
-            type="text" 
+          <input id="last_name" type="text"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.last_name }"
-            v-model="form.last_name"
-          >
+            :class="{ 'border-red-500': form.errors.last_name }" v-model="form.last_name">
           <p v-if="form.errors.last_name" class="text-red-500 text-sm mt-1">
             {{ form.errors.last_name }}
           </p>
@@ -839,13 +842,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Second Row -->
         <div>
           <label for="phone_number" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-          <input 
-            id="phone_number"
-            type="tel" 
+          <input id="phone_number" type="tel"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.phone_number }"
-            v-model="form.phone_number"
-          >
+            :class="{ 'border-red-500': form.errors.phone_number }" v-model="form.phone_number">
           <p v-if="form.errors.phone_number" class="text-red-500 text-sm mt-1">
             {{ form.errors.phone_number }}
           </p>
@@ -854,15 +853,12 @@ const filteredFacultyLoads = computed(() => {
         <!-- School Year -->
         <div v-if="isEditMode">
           <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
-          <select 
-            id="school_year"
-            v-model="form.school_year_id"
+          <select id="school_year" v-model="form.school_year_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.school_year_id }"
-          >
+            :class="{ 'border-red-500': form.errors.school_year_id }">
             <option value="" disabled selected>Select School Year</option>
-            <option v-for="year in schoolYears" :key="year.id" :value="year.id" 
-                   :class="{'bg-blue-100 font-semibold': year.school_year_status === 'Active'}">
+            <option v-for="year in schoolYears" :key="year.id" :value="year.id"
+              :class="{ 'bg-blue-100 font-semibold': year.school_year_status === 'Active' }">
               {{ year.school_year }} {{ year.school_year_status === 'Active' ? '(Active)' : '' }}
             </option>
           </select>
@@ -871,28 +867,19 @@ const filteredFacultyLoads = computed(() => {
           </p>
         </div>
 
-         <div v-else>
+        <div v-else>
           <label for="school_year_status" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
-          <input 
-            type="text" 
-            id="school_year_status" 
-            :value="activeSchoolYear?.school_year || 'N/A'" 
-            class="input-field-add-student bg-gray-200 cursor-not-allowed" 
-            readonly 
-          />
+          <input type="text" id="school_year_status" :value="activeSchoolYear?.school_year || 'N/A'"
+            class="input-field-add-student bg-gray-200 cursor-not-allowed" readonly />
           <!-- Hidden input to actually submit the ID -->
           <!-- <input type="hidden" name="student_status_id" v-model="form.student_status_id">  -->
         </div>
 
         <div>
           <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-          <input 
-            id="address"
-            type="text" 
+          <input id="address" type="text"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.address }"
-            v-model="form.address"
-          >
+            :class="{ 'border-red-500': form.errors.address }" v-model="form.address">
           <p v-if="form.errors.address" class="text-red-500 text-sm mt-1">
             {{ form.errors.address }}
           </p>
@@ -901,13 +888,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Third Row -->
         <div>
           <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-          <input 
-            id="email"
-            type="email" 
+          <input id="email" type="email"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': form.errors.email }"
-            v-model="form.email"
-          >
+            :class="{ 'border-red-500': form.errors.email }" v-model="form.email">
           <p v-if="form.errors.email" class="text-red-500 text-sm mt-1">
             {{ form.errors.email }}
           </p>
@@ -916,21 +899,12 @@ const filteredFacultyLoads = computed(() => {
     </ReusableModal>
 
     <!-- Assign Schedule Modal -->
-    <ReusableModal 
-      :show="isScheduleModalOpen"
-      title="Assign Schedule"
-      :loading="loading"
-      submit-button-text="Assign Schedule"
-      @close="closeScheduleModal"
-      @submit="submitScheduleForm"
-    >
+    <ReusableModal :show="isScheduleModalOpen" title="Assign Schedule" :loading="loading"
+      submit-button-text="Assign Schedule" @close="closeScheduleModal" @submit="submitScheduleForm">
       <template #header>
         <div class="flex justify-between items-center">
           <h3 class="text-lg font-semibold text-gray-900">Assign Schedule</h3>
-          <button
-            @click="closeScheduleModal"
-            class="text-gray-400 hover:text-gray-500 focus:outline-none"
-          >
+          <button @click="closeScheduleModal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
             <font-awesome-icon :icon="['fas', 'xmark']" class="text-xl" />
           </button>
         </div>
@@ -941,12 +915,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Year Level -->
         <div>
           <label for="year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-          <select 
-            id="year_level"
-            v-model="scheduleForm.year_level_id"
+          <select id="year_level" v-model="scheduleForm.year_level_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.year_level_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.year_level_id }">
             <option value="" disabled selected>Select Year Level</option>
             <option v-for="yearLevel in yearLevels" :key="yearLevel.id" :value="yearLevel.id">
               {{ yearLevel.year_level }}
@@ -960,12 +931,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Section -->
         <div>
           <label for="section" class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-          <select 
-            id="section"
-            v-model="scheduleForm.section_id"
+          <select id="section" v-model="scheduleForm.section_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.section_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.section_id }">
             <option value="" disabled selected>Select Section</option>
             <option v-for="section in filteredSections" :key="section.id" :value="section.id">
               {{ section.section }}
@@ -979,12 +947,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Semester -->
         <div>
           <label for="semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-          <select 
-            id="semester"
-            v-model="scheduleForm.semester_id"
+          <select id="semester" v-model="scheduleForm.semester_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.semester_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.semester_id }">
             <option value="" disabled selected>Select Semester</option>
             <option value="1">First Semester</option>
             <option value="2">Second Semester</option>
@@ -997,12 +962,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Subject/Curriculum -->
         <div>
           <label for="subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-          <select 
-            id="subject"
-            v-model="scheduleForm.curriculum_id"
+          <select id="subject" v-model="scheduleForm.curriculum_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.curriculum_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.curriculum_id }">
             <option value="" disabled selected>Select Subject</option>
             <option v-for="curriculum in filteredCurricula" :key="curriculum.id" :value="curriculum.id">
               {{ curriculum.course_code }} - {{ curriculum.subject_name }}
@@ -1016,12 +978,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Rest of the form fields -->
         <div>
           <label for="day" class="block text-sm font-medium text-gray-700 mb-1">Day</label>
-          <select 
-            id="day"
-            v-model="scheduleForm.day"
+          <select id="day" v-model="scheduleForm.day"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.day }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.day }">
             <option value="" disabled selected>Select Day</option>
             <option value="Monday">Monday</option>
             <option value="Tuesday">Tuesday</option>
@@ -1036,13 +995,9 @@ const filteredFacultyLoads = computed(() => {
 
         <div>
           <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-          <input 
-            id="start_time"
-            type="time"
-            v-model="scheduleForm.start_time"
+          <input id="start_time" type="time" v-model="scheduleForm.start_time"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.start_time }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.start_time }">
           <p v-if="scheduleForm.errors.start_time" class="text-red-500 text-sm mt-1">
             {{ scheduleForm.errors.start_time }}
           </p>
@@ -1050,13 +1005,9 @@ const filteredFacultyLoads = computed(() => {
 
         <div>
           <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-          <input 
-            id="end_time"
-            type="time"
-            v-model="scheduleForm.end_time"
+          <input id="end_time" type="time" v-model="scheduleForm.end_time"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.end_time }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.end_time }">
           <p v-if="scheduleForm.errors.end_time" class="text-red-500 text-sm mt-1">
             {{ scheduleForm.errors.end_time }}
           </p>
@@ -1065,21 +1016,12 @@ const filteredFacultyLoads = computed(() => {
     </ReusableModal>
 
     <!-- Add the Edit Load Modal -->
-    <ReusableModal 
-      :show="isEditLoadModalOpen"
-      title="Edit Schedule"
-      :loading="loading"
-      submit-button-text="Update Schedule"
-      @close="closeEditLoadModal"
-      @submit="submitEditLoadForm"
-    >
+    <ReusableModal :show="isEditLoadModalOpen" title="Edit Schedule" :loading="loading"
+      submit-button-text="Update Schedule" @close="closeEditLoadModal" @submit="submitEditLoadForm">
       <template #header>
         <div class="flex justify-between items-center">
           <h3 class="text-lg font-semibold text-gray-900">Edit Schedule</h3>
-          <button
-            @click="closeEditLoadModal"
-            class="text-gray-400 hover:text-gray-500 focus:outline-none"
-          >
+          <button @click="closeEditLoadModal" class="text-gray-400 hover:text-gray-500 focus:outline-none">
             <font-awesome-icon :icon="['fas', 'xmark']" class="text-xl" />
           </button>
         </div>
@@ -1090,12 +1032,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Year Level -->
         <div>
           <label for="edit_year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-          <select 
-            id="edit_year_level"
-            v-model="scheduleForm.year_level_id"
+          <select id="edit_year_level" v-model="scheduleForm.year_level_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.year_level_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.year_level_id }">
             <option value="" disabled selected>Select Year Level</option>
             <option v-for="yearLevel in yearLevels" :key="yearLevel.id" :value="yearLevel.id">
               {{ yearLevel.year_level }}
@@ -1109,12 +1048,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Section -->
         <div>
           <label for="edit_section" class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-          <select 
-            id="edit_section"
-            v-model="scheduleForm.section_id"
+          <select id="edit_section" v-model="scheduleForm.section_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.section_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.section_id }">
             <option value="" disabled selected>Select Section</option>
             <option v-for="section in filteredSections" :key="section.id" :value="section.id">
               {{ section.section }}
@@ -1128,12 +1064,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Semester -->
         <div>
           <label for="edit_semester" class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-          <select 
-            id="edit_semester"
-            v-model="scheduleForm.semester_id"
+          <select id="edit_semester" v-model="scheduleForm.semester_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.semester_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.semester_id }">
             <option value="" disabled selected>Select Semester</option>
             <option value="1">First Semester</option>
             <option value="2">Second Semester</option>
@@ -1146,12 +1079,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Subject/Curriculum -->
         <div>
           <label for="edit_subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-          <select 
-            id="edit_subject"
-            v-model="scheduleForm.curriculum_id"
+          <select id="edit_subject" v-model="scheduleForm.curriculum_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.curriculum_id }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.curriculum_id }">
             <option value="" disabled selected>Select Subject</option>
             <option v-for="curriculum in filteredCurricula" :key="curriculum.id" :value="curriculum.id">
               {{ curriculum.course_code }} - {{ curriculum.subject_name }}
@@ -1165,12 +1095,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Day -->
         <div>
           <label for="edit_day" class="block text-sm font-medium text-gray-700 mb-1">Day</label>
-          <select 
-            id="edit_day"
-            v-model="scheduleForm.day"
+          <select id="edit_day" v-model="scheduleForm.day"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.day }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.day }">
             <option value="" disabled selected>Select Day</option>
             <option value="Monday">Monday</option>
             <option value="Tuesday">Tuesday</option>
@@ -1186,13 +1113,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- Start Time -->
         <div>
           <label for="edit_start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
-          <input 
-            id="edit_start_time"
-            type="time"
-            v-model="scheduleForm.start_time"
+          <input id="edit_start_time" type="time" v-model="scheduleForm.start_time"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.start_time }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.start_time }">
           <p v-if="scheduleForm.errors.start_time" class="text-red-500 text-sm mt-1">
             {{ scheduleForm.errors.start_time }}
           </p>
@@ -1201,13 +1124,9 @@ const filteredFacultyLoads = computed(() => {
         <!-- End Time -->
         <div>
           <label for="edit_end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-          <input 
-            id="edit_end_time"
-            type="time"
-            v-model="scheduleForm.end_time"
+          <input id="edit_end_time" type="time" v-model="scheduleForm.end_time"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            :class="{ 'border-red-500': scheduleForm.errors.end_time }"
-          >
+            :class="{ 'border-red-500': scheduleForm.errors.end_time }">
           <p v-if="scheduleForm.errors.end_time" class="text-red-500 text-sm mt-1">
             {{ scheduleForm.errors.end_time }}
           </p>

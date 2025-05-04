@@ -10,11 +10,10 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
 import { useForm } from '@inertiajs/vue3';
-import { defineProps } from "vue";
-import { ref, watch, computed, reactive } from 'vue';
+import { defineProps, reactive } from "vue";
+import { ref, watch, computed, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
-import { Teleport } from 'vue';
 
 library.add(faXmark);
 
@@ -23,263 +22,217 @@ defineOptions({
 });
 
 const props = defineProps({
-    sections: Array,
-    errors: Object,
-    activeSchoolYear: {
-        type: Object,
-        required: true
-    },
-    flash: {
-        type: Object,
-        default: () => ({})
-    }
+    sections: Object,
+    yearLevels: Array,
+    activeSchoolYear: Object,
+    schoolYears: Array,
+    semesters: Array,
+    filters: Object,
 });
 
-const sections = ref(props.sections || []);
 const isEditMode = ref(false);
 const selectedSection = ref(null);
 const loading = ref(false);
-const selectedYearLevel = ref('');
-const selectedSectionFilter = ref('');
-const selectedSchoolYear = ref('');
-const isModalOpen = ref(false);
 
-// Table headers
-const tableHeaders = [
-    { key: 'section', label: 'Section Name' },
-    { key: 'year_level', label: 'Year Level' },
-    { key: 'min_students', label: 'Minimum Students' },
-    { key: 'max_students', label: 'Maximum Students' },
-    { key: 'school_year', label: 'School Year' }
-];
+// Filters
+const search = ref(props.filters.search || '');
+const yearLevelFilter = ref(props.filters.year_level || '');
+const semesterFilter = ref(props.filters.semester || '');
+const selectedSchoolYear = ref(props.filters.school_year || '');
 
-// Action buttons for the table
-const actionButtons = [
-    {
-        label: 'Edit',
-        class: 'bg-blue-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-blue-600',
-        action: (section) => editSection(section)
-    },
-    {
-        label: 'Delete',
-        class: 'bg-red-500 text-white px-3 py-1 rounded cursor-pointer hover:bg-red-600',
-        action: (section) => deleteSection(section.id)
+onMounted(() => {
+    if (!selectedSchoolYear.value) {
+        selectedSchoolYear.value = props.activeSchoolYear?.id ?? null;
     }
-];
-
-// Year level options for the form
-const yearLevelOptions = [
-    { value: '1', label: '1st Year' },
-    { value: '2', label: '2nd Year' },
-    { value: '3', label: '3rd Year' },
-    { value: '4', label: '4th Year' }
-];
-
-// Get unique year levels and sections for filters
-const uniqueYearLevels = computed(() => {
-    const yearLevels = new Set(sections.value.map(section => section.year_level));
-    return Array.from(yearLevels);
 });
 
-const uniqueSections = computed(() => {
-    const sectionNames = new Set(sections.value.map(section => section.section));
-    return Array.from(sectionNames);
-});
+// const filteredSections = computed(() => {
+//     let filtered = props.sections.data;
 
-// Get unique school years for filter
-const uniqueSchoolYears = computed(() => {
-    const schoolYears = new Set(sections.value.map(section => section.school_year));
-    return Array.from(schoolYears);
-});
+//     if (yearLevelFilter.value) {
+//         filtered = filtered.filter(section => section.year_level_id == yearLevelFilter.value);
+//     }
 
-// Filtered sections
-const filteredSections = computed(() => {
-    return sections.value.filter(section => {
-        const yearLevelMatch = !selectedYearLevel.value || section.year_level === selectedYearLevel.value;
-        const sectionMatch = !selectedSectionFilter.value || section.section === selectedSectionFilter.value;
-        const schoolYearMatch = !selectedSchoolYear.value || section.school_year === selectedSchoolYear.value;
-        return yearLevelMatch && sectionMatch && schoolYearMatch;
+//     const schoolYearId = selectedSchoolYear.value || props.activeSchoolYear?.id;
+//     if (schoolYearId) {
+//         filtered = filtered.filter(section => section.school_year_id == schoolYearId);
+//     }
+
+//     if (semesterFilter.value) {
+//         filtered = filtered.filter(section => section.semester_id == semesterFilter.value);
+//     }
+
+//     if (search.value) {
+//         filtered = filtered.filter(section =>
+//             section.section.toLowerCase().includes(search.value.toLowerCase())
+//         );
+//     }
+
+//     return filtered;
+// });
+
+// console.log(filteredSections);
+
+
+// Watch filters and update URL
+watch(search, async (newSearch) => {
+    router.get(route('admin.section.management'), {
+        search: newSearch,
+        year_level: yearLevelFilter.value,
+        semester: semesterFilter.value,
+        school_year: selectedSchoolYear.value || props.activeSchoolYear?.id
+        // Don't preserve page here - let server decide
+    }, {
+        preserveState: true,
+        preserveScroll: true
     });
 });
 
-// Form for adding/editing sections
+// Apply similar changes to all other filter watchers
+
+watch(yearLevelFilter, async (newYearLevel) => {
+    router.get(route('admin.section.management'), {
+        search: search.value,
+        year_level: newYearLevel,
+        semester: semesterFilter.value,
+        school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
+        // page: props.sections.current_page
+    }, {
+        preserveScroll: true,
+        preserveState: true,
+        // replace: true,
+    });
+});
+
+watch(semesterFilter, async (newSemester) => {
+    router.get(route('admin.section.management'), {
+        search: search.value,
+        year_level: yearLevelFilter.value,
+        semester: newSemester,
+        school_year: selectedSchoolYear.value || props.activeSchoolYear?.id,
+        // page: props.sections.current_page
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+        // replace: true,
+    });
+});
+
+watch(selectedSchoolYear, async (newSchoolYear) => {
+    router.get(route('admin.section.management'), {
+        search: search.value,
+        year_level: yearLevelFilter.value,
+        semester: semesterFilter.value,
+        school_year: newSchoolYear || props.activeSchoolYear?.id,
+        page: 1 // Always reset to page 1 when changing school years
+    }, {
+        preserveState: true,
+        preserveScroll: true
+    });
+});
+
+const resetFilters = () => {
+    search.value = '';
+    yearLevelFilter.value = '';
+    semesterFilter.value = '';
+    selectedSchoolYear.value = props.activeSchoolYear?.id;
+
+    router.get(route('admin.section.management'), {
+        school_year: props.activeSchoolYear?.id,
+        page: 1
+    }, {
+        preserveScroll: true
+    });
+};
+
+const isModalOpen = ref(false);
+
+const openModal = (section) => {
+    if (section) {
+        isEditMode.value = true;
+        selectedSection.value = section;
+        form.section = section.section;
+        form.year_level_id = section.year_level_id;
+        form.school_year_id = section.school_year_id;
+        form.semester_id = section.semester_id;
+        form.minimum_number_students = section.minimum_number_students;
+        form.maximum_number_students = section.maximum_number_students;
+    } else {
+        isEditMode.value = false;
+        form.reset();
+        form.school_year_id = props.activeSchoolYear?.id;
+    }
+    isModalOpen.value = true;
+};
+
+const closeModal = () => {
+    if (loading.value) return;
+    selectedSection.value = null;
+    isEditMode.value = false;
+    form.reset();
+    form.clearErrors();
+    isModalOpen.value = false;
+};
+
 const form = useForm({
     section: '',
     year_level_id: '',
-    school_year: props.activeSchoolYear?.school_year || '',
-    school_year_status: props.activeSchoolYear?.school_year_status || '',
+    school_year_id: '',
+    semester_id: '',
     minimum_number_students: '',
     maximum_number_students: ''
 });
 
-// Replace the notification ref with reactive object
 const notification = reactive({
     show: false,
     message: '',
     type: 'success'
 });
 
-// Watch for flash messages
-watch(() => props.flash?.success, (message) => {
-    if (message) {
-        showNotification(message, 'success');
-    }
-}, { immediate: true });
+const showNotification = (message, type = 'success') => {
+    notification.show = false;
+    setTimeout(() => {
+        notification.message = message;
+        notification.type = type;
+        notification.show = true;
+    }, 50);
 
-watch(() => props.flash?.error, (message) => {
-    if (message) {
-        showNotification(message, 'error');
-    }
-}, { immediate: true });
-
-const openAddModal = () => {
-    isEditMode.value = false;
-    selectedSection.value = null;
-    form.reset();
-    // Set the school year fields to active school year when opening add modal
-    form.school_year = props.activeSchoolYear?.school_year || '';
-    form.school_year_status = props.activeSchoolYear?.school_year_status || '';
-    isModalOpen.value = true;
-};
-
-const editSection = (section) => {
-    if (!section) return;
-    isEditMode.value = true;
-    selectedSection.value = section;
-    form.section = section.section;
-    form.year_level_id = section.year_level_id;
-    form.school_year = section.school_year;
-    form.school_year_status = section.school_year_status;
-    form.minimum_number_students = section.min_students;
-    form.maximum_number_students = section.max_students;
-    isModalOpen.value = true;
-};
-
-// Add validation function
-const validateForm = () => {
-    let isValid = true;
-    form.clearErrors();
-
-    // Validate Section Name
-    if (!form.section) {
-        form.setError('section', 'Section name is required');
-        isValid = false;
-    } else if (!/^[A-Za-z0-9\s-]+$/.test(form.section)) {
-        form.setError('section', 'Section name can only contain letters, numbers, spaces and hyphens');
-        isValid = false;
-    }
-
-    // Validate Year Level
-    if (!form.year_level_id) {
-        form.setError('year_level_id', 'Year level is required');
-        isValid = false;
-    }
-
-    // Validate Minimum Students
-    if (!form.minimum_number_students) {
-        form.setError('minimum_number_students', 'Minimum number of students is required');
-        isValid = false;
-    } else if (parseInt(form.minimum_number_students) < 1) {
-        form.setError('minimum_number_students', 'Minimum students must be at least 1');
-        isValid = false;
-    }
-
-    // Validate Maximum Students
-    if (!form.maximum_number_students) {
-        form.setError('maximum_number_students', 'Maximum number of students is required');
-        isValid = false;
-    } else if (parseInt(form.maximum_number_students) <= parseInt(form.minimum_number_students)) {
-        form.setError('maximum_number_students', 'Maximum students must be greater than minimum students');
-        isValid = false;
-    }
-
-    return isValid;
+    setTimeout(() => {
+        notification.show = false;
+    }, 2500);
 };
 
 const submitForm = () => {
-    // Validate form before submission
-    if (!validateForm()) {
-        showNotification('Please fix the errors in the form', 'error');
-        return;
-    }
-
     loading.value = true;
-    
-    // Prepare form data with exact field names matching the fillable array
-    const formData = {
-        section: form.section.trim(),
-        year_level_id: form.year_level_id,
-        school_year: props.activeSchoolYear?.school_year,
-        school_year_status: props.activeSchoolYear?.school_year_status,
-        minimum_number_students: parseInt(form.minimum_number_students),
-        maximum_number_students: parseInt(form.maximum_number_students)
-    };
-
     if (isEditMode.value && selectedSection.value) {
-        // Update existing section
-        router.put(`/section/${selectedSection.value.id}`, formData, {
+        form.put(`/sections/${selectedSection.value.id}/update`, {
             preserveScroll: true,
-            onSuccess: (page) => {
-                if (page.props.flash?.error) {
-                    showNotification(page.props.flash.error, 'error');
-                    return;
-                }
-                sections.value = page.props.sections;
-                closeModal();
+            onSuccess: () => {
                 showNotification('Section updated successfully');
+                closeModal();
             },
             onError: (errors) => {
-                if (typeof errors === 'object') {
-                    Object.keys(errors).forEach(key => {
-                        form.setError(key, errors[key]);
-                    });
-                }
-                showNotification(errors.message || 'Failed to update section', 'error');
+                showNotification('Failed to update section', 'error');
             },
             onFinish: () => {
                 loading.value = false;
             }
         });
     } else {
-        // Add new section
-        router.post('/section/add', formData, {
+        form.post('/admin/section/add', {
             preserveScroll: true,
-            onSuccess: (page) => {
-                if (page.props.flash?.error) {
-                    showNotification(page.props.flash.error, 'error');
-                    loading.value = false;
-                    return;
-                }
-                
-                if (page.props.sections) {
-                    sections.value = page.props.sections;
-                    closeModal();
-                    showNotification(page.props.flash?.success || 'Section added successfully');
-                } else {
-                    showNotification('Error: No sections data received', 'error');
-                }
+            onSuccess: () => {
+                showNotification('Section added successfully');
+                closeModal();
             },
             onError: (errors) => {
-                if (typeof errors === 'object') {
-                    Object.keys(errors).forEach(key => {
-                        form.setError(key, errors[key]);
-                    });
-                }
-                showNotification(errors.message || 'Failed to add section', 'error');
+                showNotification('Failed to add section', 'error');
             },
             onFinish: () => {
                 loading.value = false;
             }
         });
     }
-};
-
-const closeModal = () => {
-    isModalOpen.value = false;
-    isEditMode.value = false;
-    selectedSection.value = null;
-    form.reset();
-    form.clearErrors();
 };
 
 const deleteSection = (id) => {
@@ -293,176 +246,232 @@ const deleteSection = (id) => {
         confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            loading.value = true;
-            router.delete(`/section/${id}`, {
+            router.delete(`/admin/section/${id}`, {
                 preserveScroll: true,
-                onSuccess: (page) => {
-                    sections.value = page.props.sections;
+                onSuccess: () => {
                     showNotification('Section deleted successfully');
                 },
                 onError: () => {
                     showNotification('Failed to delete section', 'error');
-                },
-                onFinish: () => {
-                    loading.value = false;
                 }
             });
         }
     });
 };
 
-const showNotification = (message, type = 'success') => {
-    notification.show = false; // Reset first
-    setTimeout(() => {
-        notification.message = message;
-        notification.type = type;
-        notification.show = true;
-    }, 50);
+const tableHeaders = [
+    { key: 'section', label: 'Section Name' },
+    { key: 'year_level.year_level', label: 'Year Level' },
+    { key: 'semester.semester_name', label: 'Semester' },
+    { key: 'minimum_number_students', label: 'Min Students' },
+    { key: 'maximum_number_students', label: 'Max Students' }
+];
 
-    // Auto-hide notification after 2.5s
-    setTimeout(() => {
-        notification.show = false;
-    }, 2500);
+const processNestedValue = (item, key) => {
+    return key.split('.').reduce((obj, k) => obj?.[k], item) || 'N/A';
 };
 </script>
 
 <template>
-    <Head title="Sections" />
-    <div v-if="activeSchoolYear"
-        class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                    fill="currentColor">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clip-rule="evenodd" />
-                </svg>
-            </div>
-            <div class="ml-3">
-                <p class="text-sm font-medium">
-                    Active School Year: <span class="font-bold">{{ activeSchoolYear.school_year }}</span>
-                </p>
-            </div>
-        </div>
-    </div>
-    
+
+    <Head title="Section Management" />
     <div class="relative">
-        <!-- Replace existing Notification with Teleport -->
         <Teleport to="body">
             <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
         </Teleport>
 
-        <Overlay :show="isModalOpen" @click="closeModal" />
-        <div class="flex flex-col gap-4 mb-4">
-            <!-- Filter dropdowns -->
-            <div class="flex items-center gap-4">
-                <select v-model="selectedYearLevel"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
-                    <option value="">All Year Levels</option>
-                    <option v-for="yearLevel in uniqueYearLevels" :key="yearLevel" :value="yearLevel">
-                        {{ yearLevel }}
-                    </option>
-                </select>
-
-                <select v-model="selectedSectionFilter"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
-                    <option value="">All Sections</option>
-                    <option v-for="section in uniqueSections" :key="section" :value="section">
-                        {{ section }}
-                    </option>
-                </select>
-
-                <!-- <select v-model="selectedSchoolYear"
-                    class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500">
-                    <option value="">All School Years</option>
-                    <option v-for="schoolYear in uniqueSchoolYears" :key="schoolYear" :value="schoolYear">
-                        {{ schoolYear }}
-                    </option>
-                </select> -->
-
-                <button @click="() => { selectedYearLevel = ''; selectedSectionFilter = ''; selectedSchoolYear = ''; }"
-                    class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md px-3 py-2 text-sm">
-                    Clear Filters
-                </button>
+        <div v-if="activeSchoolYear"
+            class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-sm">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">
+                        Active School Year: <span class="font-bold">{{ activeSchoolYear.school_year }}</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <!-- Add Section Button -->
-            <div class="flex justify-end">
-                <button @click="openAddModal"
+        <Overlay :show="isModalOpen" @click="closeModal" />
+
+        <div class="flex flex-col mb-4">
+            <div class="flex justify-between items-center">
+                <form @submit.prevent>
+                    <input v-model="search" type="text" placeholder="Search sections..."
+                        class="bg-[#ffff] p-2 pr-[3rem] text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 border-gray-500 w-[300px]">
+                </form>
+
+                <button @click="openModal(null)"
                     class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
                     Add New Section
                 </button>
             </div>
+
+            <div class="flex gap-4 items-center mt-3">
+                <div>
+                    <select v-model="selectedSchoolYear"
+                        class="w-full bg-white p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border border-gray-300 appearance-none cursor-pointer focus:outline-none focus:border-blue-500">
+                        <option v-for="year in schoolYears" :key="year.id" :value="year.id">
+                            {{ year.school_year }}
+                            <span v-if="year.id === activeSchoolYear?.id">(Active)</span>
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <select v-model="yearLevelFilter"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">All Year Levels</option>
+                        <option v-for="year in yearLevels" :key="year.id" :value="year.id">
+                            {{ year.year_level }}
+                        </option>
+                    </select>
+                </div>
+
+                <div>
+                    <select v-model="semesterFilter"
+                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">All Semesters</option>
+                        <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
+                            {{ semester.semester_name }}
+                        </option>
+                    </select>
+                </div>
+
+                <button @click="resetFilters"
+                    class="cursor-pointer bg-[#1a3047] text-[#ffff] font-bold rounded-md pt-2 pb-2 pl-3 pr-3 flex justify-center items-center">
+                    Clear Filter
+                </button>
+            </div>
         </div>
 
-        <!-- Reusable Table Component -->
-        <ReusableTable :headers="tableHeaders" :data="filteredSections" :actions="true"
-            :action-buttons="actionButtons" />
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                    <tr class="bg-[#1a3047] text-white">
+                        <th v-for="header in tableHeaders" :key="header.key"
+                            class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            {{ header.label }}
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    <tr v-for="(section, index) in sections.data" :key="section.id"
+                        :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
+                        <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4 text-sm text-gray-900">
+                            {{ processNestedValue(section, header.key) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <div class="flex space-x-2">
+                                <button @click="openModal(section)"
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Edit</button>
+                                <button @click="deleteSection(section.id)"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-        <!-- Reusable Modal Component -->
+        <div class="mt-6 flex items-center justify-between p-6">
+            <div class="text-sm text-gray-700">
+                Showing <span class="font-semibold">{{ sections.from }}</span> to <span class="font-semibold">{{
+                    sections.to }}</span> of <span class="font-semibold">{{ sections.total }}</span> sections
+            </div>
+            <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <Link v-if="sections.currentPage > 1" :href="sections.links.prev" preserve-scroll rel="prev"
+                    aria-label="Previous"
+                    class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd"
+                        d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                        clip-rule="evenodd" />
+                </svg>
+                </Link>
+
+                <template v-for="(link, key) in sections.links" :key="key">
+                    <Link v-if="link.url" :href="link.url" preserve-scroll :class="[
+                        'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 border focus:outline-none focus:ring-2 focus:ring-indigo-500',
+                        { ' bg-indigo-50 border-indigo-500 text-indigo-600': link.active },
+                        key === 0 && sections.currentPage === 1 ? 'rounded-l-md' : '',
+                        key === sections.links.length - 1 && sections.currentPage === sections.lastPage ? 'rounded-r-md' : '',
+                    ]" :aria-current="link.active ? 'page' : null" v-html="link.label">
+                    </Link>
+                </template>
+
+                <Link v-if="sections.currentPage < sections.lastPage" :href="sections.links.next" preserve-scroll
+                    rel="next" aria-label="Next"
+                    class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-r-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </Link>
+            </nav>
+        </div>
+
         <ReusableModal :show="isModalOpen" :title="isEditMode ? 'Edit Section' : 'Add Section'" :loading="loading"
             :submit-button-text="isEditMode ? 'Update Section' : 'Add Section'" @close="closeModal"
             @submit="submitForm">
-            <!-- Form Grid Container -->
             <div class="grid grid-cols-2 gap-4">
-                <!-- Section Name -->
                 <div>
-                    <label for="section" class="block text-sm font-medium text-gray-700 mb-1">Section Name</label>
-                    <input id="section" type="text" v-model="form.section" class="input-field-add-student w-full"
-                        :class="{ 'border-red-500': form.errors.section }">
-                    <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">
-                        {{ form.errors.section }}
-                    </p>
-                </div>
-
-                <!-- Year Level -->
-                <div>
-                    <label for="year_level" class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-                    <select id="year_level" v-model="form.year_level_id" class="input-field-add-student w-full"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
+                    <select v-model="form.year_level_id" class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.year_level_id }">
                         <option value="" disabled selected>Select Year Level</option>
-                        <option v-for="option in yearLevelOptions" :key="option.value" :value="option.value">
-                            {{ option.label }}
+                        <option v-for="year in yearLevels" :key="year.id" :value="year.id">
+                            {{ year.year_level }}
                         </option>
                     </select>
-                    <p v-if="form.errors.year_level_id" class="text-red-500 text-sm mt-1">
-                        {{ form.errors.year_level_id }}
+                    <p v-if="form.errors.year_level_id" class="text-red-500 text-sm mt-1">{{ form.errors.year_level_id
+                    }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                    <select v-model="form.semester_id" class="input-field-add-student w-full"
+                        :class="{ 'border-red-500': form.errors.semester_id }">
+                        <option value="" disabled selected>Select Semester</option>
+                        <option v-for="semester in semesters" :key="semester.id" :value="semester.id">
+                            {{ semester.semester_name }}
+                        </option>
+                    </select>
+                    <p v-if="form.errors.semester_id" class="text-red-500 text-sm mt-1">{{ form.errors.semester_id }}
                     </p>
                 </div>
 
-                <!-- School Year (Disabled) -->
                 <div>
-                    <label for="school_year" class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
-                    <input id="school_year" type="text" :value="props.activeSchoolYear?.school_year"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Section Name</label>
+                    <input type="text" v-model="form.section" class="input-field-add-student w-full"
+                        :class="{ 'border-red-500': form.errors.section }">
+                    <p v-if="form.errors.section" class="text-red-500 text-sm mt-1">{{ form.errors.section }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">School Year</label>
+                    <input type="text" :value="activeSchoolYear?.school_year"
                         class="input-field-add-student w-full bg-gray-100 cursor-not-allowed" disabled>
                 </div>
 
-                <!-- Status (Disabled) -->
                 <div>
-                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                    <input id="status" type="text" :value="props.activeSchoolYear?.school_year_status"
-                        class="input-field-add-student w-full bg-gray-100 cursor-not-allowed" disabled>
-                </div>
-
-                <!-- Minimum Students -->
-                <div>
-                    <label for="min_students" class="block text-sm font-medium text-gray-700 mb-1">Minimum
-                        Students</label>
-                    <input id="min_students" type="number" v-model="form.minimum_number_students"
-                        class="input-field-add-student w-full"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Students</label>
+                    <input type="number" v-model="form.minimum_number_students" class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.minimum_number_students }">
                     <p v-if="form.errors.minimum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.minimum_number_students }}
                     </p>
                 </div>
 
-                <!-- Maximum Students -->
                 <div>
-                    <label for="max_students" class="block text-sm font-medium text-gray-700 mb-1">Maximum
-                        Students</label>
-                    <input id="max_students" type="number" v-model="form.maximum_number_students"
-                        class="input-field-add-student w-full"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Maximum Students</label>
+                    <input type="number" v-model="form.maximum_number_students" class="input-field-add-student w-full"
                         :class="{ 'border-red-500': form.errors.maximum_number_students }">
                     <p v-if="form.errors.maximum_number_students" class="text-red-500 text-sm mt-1">
                         {{ form.errors.maximum_number_students }}

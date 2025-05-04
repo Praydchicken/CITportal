@@ -28,7 +28,7 @@ class TeacherGradeManagementController extends Controller
 
             // Get active school year
             $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
-            
+
             if (!$activeSchoolYear) {
                 return back()->with('error', 'No active school year found. Please contact the administrator.');
             }
@@ -93,7 +93,6 @@ class TeacherGradeManagementController extends Controller
                     ]
                 ],
             ]);
-
         } catch (\Exception $e) {
             return back()->with('error', 'Error loading grade management: ' . $e->getMessage());
         }

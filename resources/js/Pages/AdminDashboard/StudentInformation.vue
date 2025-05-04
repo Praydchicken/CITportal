@@ -65,7 +65,7 @@ const filteredSections = computed(() => {
 
   // Use selected school year if any, otherwise use active school year
   const schoolYearId = selectedSchoolYear.value || props.activeSchoolYear?.id;
-  
+
   if (schoolYearId) {
     filtered = filtered.filter(section => section.school_year_id == schoolYearId);
   }
@@ -383,7 +383,7 @@ const deleteStudent = (id) => {
 
 const tableHeaders = [
   { key: 'student_number', label: 'Student No.' },
-  {key: 'full_name', label: 'Full Name' },
+  { key: 'full_name', label: 'Full Name' },
   // { key: 'first_name', label: 'First Name' },
   // { key: 'middle_name', label: 'Middle Name' },
   // { key: 'last_name', label: 'Last Name' },
@@ -395,9 +395,9 @@ const tableHeaders = [
 // Modify the ReusableTable component to handle nested properties
 const processNestedValue = (item, key) => {
   if (key === 'full_name') {
-      const middle = item.middle_name ? ` ${item.middle_name}` : '';
-      return `${item.first_name}${middle} ${item.last_name}`;
-    }
+    const middle = item.middle_name ? ` ${item.middle_name}` : '';
+    return `${item.first_name}${middle} ${item.last_name}`;
+  }
   return key.split('.').reduce((obj, k) => obj?.[k], item) || 'N/A';
 };
 
@@ -410,13 +410,20 @@ const formFilteredSections = computed(() => {
   if (!form.year_level_id) {
     return [];
   }
-  return sections.value.filter(section =>
-    section.year_level_id === parseInt(form.year_level_id)
+
+  // Use active school year for filtering
+  const schoolYearId = props.activeSchoolYear?.id;
+  if (!schoolYearId) return [];
+
+  return props.sections.filter(section =>
+    section.year_level_id === parseInt(form.year_level_id) &&
+    section.school_year_id === schoolYearId
   );
 });
 </script>
 
 <template>
+
   <Head title="Student Information" />
   <div class="relative">
     <!-- Notification component -->
@@ -547,8 +554,7 @@ const formFilteredSections = computed(() => {
         <tbody class="bg-white divide-y divide-gray-200" :key="JSON.stringify(students)">
           <tr v-for="(student, index) in students.data" :key="student.id"
             :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
-            <td v-for="header in tableHeaders" :key="header.key"
-              class="px-6 py-4  text-sm text-gray-900">
+            <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4  text-sm text-gray-900">
               {{ processNestedValue(student, header.key) }}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -567,12 +573,12 @@ const formFilteredSections = computed(() => {
     </div>
 
     <!-- Pagination -->
-    <div class="mt-6 flex items-center justify-between p-6"  :class="{ 'pointer-events-none opacity-50': isModalOPen }">
+    <div class="mt-6 flex items-center justify-between p-6" :class="{ 'pointer-events-none opacity-50': isModalOPen }">
       <div class="text-sm text-gray-700">
         Showing <span class="font-semibold">{{ students.from }}</span> to <span class="font-semibold">{{ students.to
-          }}</span> of <span class="font-semibold">{{ students.total }}</span> students
+        }}</span> of <span class="font-semibold">{{ students.total }}</span> students
       </div>
-      <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination" >
+      <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination">
         <Link v-if="students.currentPage > 1" :href="students.links.prev" preserve-scroll rel="prev"
           aria-label="Previous"
           class="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 relative inline-flex items-center px-4 py-2 rounded-l-md focus:outline-none focus:ring-2 focus:ring-indigo-500">

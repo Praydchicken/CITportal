@@ -33,12 +33,12 @@ const auth = computed(() => {
 // Get unique subjects with their metadata (course code, etc.)
 const subjectOptions = computed(() => {
   if (!hasAssignedStudents.value) return [];
-  
+
   const subjectsMap = new Map();
-  
+
   students.value.forEach(student => {
     if (!student || !student.subject) return;
-    
+
     if (!subjectsMap.has(student.subject)) {
       subjectsMap.set(student.subject, {
         course_code: student.course_code,
@@ -47,13 +47,13 @@ const subjectOptions = computed(() => {
         semesters: new Set()
       });
     }
-    
+
     const subjectData = subjectsMap.get(student.subject);
     if (student.section) subjectData.sections.add(student.section);
     if (student.year_level) subjectData.year_levels.add(student.year_level);
     if (student.semester) subjectData.semesters.add(student.semester);
   });
-  
+
   return Array.from(subjectsMap.entries()).map(([subject, data]) => ({
     subject,
     course_code: data.course_code,
@@ -66,7 +66,7 @@ const subjectOptions = computed(() => {
 // Get unique values for filters based on selected subject
 const yearLevels = computed(() => {
   if (!hasAssignedStudents.value) return [];
-  
+
   if (selectedSubject.value === 'all') {
     const allYearLevels = new Set(
       students.value
@@ -75,14 +75,14 @@ const yearLevels = computed(() => {
     );
     return Array.from(allYearLevels).sort();
   }
-  
+
   const subject = subjectOptions.value.find(s => s.subject === selectedSubject.value);
   return subject?.year_levels || [];
 });
 
 const sections = computed(() => {
   if (!hasAssignedStudents.value) return [];
-  
+
   if (selectedSubject.value === 'all') {
     const allSections = new Set(
       students.value
@@ -91,14 +91,14 @@ const sections = computed(() => {
     );
     return Array.from(allSections).sort();
   }
-  
+
   const subject = subjectOptions.value.find(s => s.subject === selectedSubject.value);
   return subject?.sections || [];
 });
 
 const semesters = computed(() => {
   if (!hasAssignedStudents.value) return [];
-  
+
   if (selectedSubject.value === 'all') {
     const allSemesters = new Set(
       students.value
@@ -107,7 +107,7 @@ const semesters = computed(() => {
     );
     return Array.from(allSemesters).sort();
   }
-  
+
   const subject = subjectOptions.value.find(s => s.subject === selectedSubject.value);
   return subject?.semesters || [];
 });
@@ -115,7 +115,7 @@ const semesters = computed(() => {
 // Filter students based on search and filters with null checks
 const filteredStudents = computed(() => {
   if (!hasAssignedStudents.value) return [];
-  
+
   return students.value.filter(student => {
     if (!student) return false;
 
@@ -123,19 +123,19 @@ const filteredStudents = computed(() => {
       (student.name?.toLowerCase() || '').includes(searchQuery.value.toLowerCase()) ||
       (student.student_number?.toLowerCase() || '').includes(searchQuery.value.toLowerCase())
     );
-    
-    const matchesSubject = selectedSubject.value === 'all' || 
+
+    const matchesSubject = selectedSubject.value === 'all' ||
       student.subject === selectedSubject.value;
 
-    const matchesYearLevel = selectedYearLevel.value === 'all' || 
+    const matchesYearLevel = selectedYearLevel.value === 'all' ||
       student.year_level === selectedYearLevel.value;
 
-    const matchesSection = selectedSection.value === 'all' || 
+    const matchesSection = selectedSection.value === 'all' ||
       student.section === selectedSection.value;
-    
-    const matchesSemester = selectedSemester.value === 'all' || 
+
+    const matchesSemester = selectedSemester.value === 'all' ||
       student.semester === selectedSemester.value;
-    
+
     return matchesSearch && matchesSubject && matchesYearLevel && matchesSection && matchesSemester;
   });
 });
@@ -143,14 +143,14 @@ const filteredStudents = computed(() => {
 // Group students by subject with their current academic details
 const groupedStudents = computed(() => {
   const groups = {};
-  
+
   if (!hasAssignedStudents.value) return groups;
 
   filteredStudents.value.forEach(student => {
     if (!student || !student.subject) return;
-    
+
     const groupKey = `${student.subject}-${student.course_code}`;
-    
+
     if (!groups[groupKey]) {
       groups[groupKey] = {
         subject: student.subject,
@@ -158,10 +158,10 @@ const groupedStudents = computed(() => {
         students: []
       };
     }
-    
+
     groups[groupKey].students.push(student);
   });
-  
+
   return groups;
 });
 
@@ -175,24 +175,16 @@ console.log(groupedStudents);
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-gray-800 mb-2">Assigned Students</h1>
       <p class="text-gray-600">
-        <span class="font-medium">{{ auth?.name || 'Teacher' }}</span> - Manage and view your assigned students for each subject.
+        <span class="font-medium">{{ auth?.name || 'Teacher' }}</span> - Manage and view your assigned students for each
+        subject.
       </p>
     </div>
 
     <!-- No Assigned Students State -->
     <div v-if="!hasAssignedStudents" class="bg-white rounded-lg shadow-sm p-12 text-center">
-      <svg
-        class="mx-auto h-16 w-16 text-gray-400"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-        />
+      <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
       <h3 class="mt-4 text-lg font-medium text-gray-900">No assigned students</h3>
       <p class="mt-2 text-sm text-gray-600">
@@ -210,24 +202,12 @@ console.log(groupedStudents);
         <div class="space-y-4">
           <!-- Search Bar -->
           <div class="relative">
-            <input
-              type="text"
-              v-model="searchQuery"
-              placeholder="Search by student name or number..."
-              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-            <svg
-              class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
+            <input type="text" v-model="searchQuery" placeholder="Search by student name or number..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
 
@@ -236,11 +216,9 @@ console.log(groupedStudents);
             <!-- Subject Filter -->
             <div class="flex-1 min-w-[200px]">
               <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-              <select
-                v-model="selectedSubject"
+              <select v-model="selectedSubject"
                 class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                @change="selectedYearLevel = 'all'; selectedSection = 'all'; selectedSemester = 'all'"
-              >
+                @change="selectedYearLevel = 'all'; selectedSection = 'all'; selectedSemester = 'all'">
                 <option value="all">All Subjects</option>
                 <option v-for="subject in subjectOptions" :key="subject.subject" :value="subject.subject">
                   {{ subject.subject }} ({{ subject.course_code }})
@@ -251,10 +229,8 @@ console.log(groupedStudents);
             <!-- Semester Filter -->
             <div class="flex-1 min-w-[200px]">
               <label class="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-              <select
-                v-model="selectedSemester"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
+              <select v-model="selectedSemester"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="all">All Semesters</option>
                 <option v-for="semester in semesters" :key="semester" :value="semester">
                   {{ semester }}
@@ -265,10 +241,8 @@ console.log(groupedStudents);
             <!-- Year Level Filter -->
             <div class="flex-1 min-w-[200px]">
               <label class="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
-              <select
-                v-model="selectedYearLevel"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
+              <select v-model="selectedYearLevel"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="all">All Year Levels</option>
                 <option v-for="yearLevel in yearLevels" :key="yearLevel" :value="yearLevel">
                   {{ yearLevel }}
@@ -279,10 +253,8 @@ console.log(groupedStudents);
             <!-- Section Filter -->
             <div class="flex-1 min-w-[200px]">
               <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-              <select
-                v-model="selectedSection"
-                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
+              <select v-model="selectedSection"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="all">All Sections</option>
                 <option v-for="section in sections" :key="section" :value="section">
                   {{ section }}
@@ -307,29 +279,25 @@ console.log(groupedStudents);
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Number</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year Level</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student
+                    Number</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year Level
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semester
+                  </th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr v-for="student in group.students" :key="student.id" class="hover:bg-gray-50">
                   <template v-if="student.id === null">
                     <td :colspan="5" class="text-center py-6 rounded-lg shadow-sm">
-                      <svg
-                        class="mx-auto h-6 w-6 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                        />
+                      <svg class="mx-auto h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                       <h3 class="mt-2 text-sm font-medium text-gray-400">No students assigned yet</h3>
                     </td>
@@ -370,19 +338,11 @@ console.log(groupedStudents);
       </div>
 
       <!-- Empty Filter Results State -->
-      <div v-if="hasAssignedStudents && Object.keys(groupedStudents).length === 0" class="text-center py-12 bg-white rounded-lg shadow-sm">
-        <svg
-          class="mx-auto h-12 w-12 text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-          />
+      <div v-if="hasAssignedStudents && Object.keys(groupedStudents).length === 0"
+        class="text-center py-12 bg-white rounded-lg shadow-sm">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900">No students match your criteria</h3>
         <p class="mt-1 text-sm text-gray-500">

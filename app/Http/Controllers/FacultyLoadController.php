@@ -44,15 +44,16 @@ class FacultyLoadController extends Controller
                     'id' => $section->id,
                     'section' => $section->section,
                     'year_level' => $section->yearLevel->year_level,
-                    'year_level_id' => $section->year_level_id
+                    'year_level_id' => $section->year_level_id,
+                    'school_year_id' => $section->school_year_id // Add this line
                 ];
             });
         $yearLevels = YearLevel::all();
-        
+
         // Get school years and active school year
         $schoolYears = SchoolYear::orderBy('school_year', 'desc')->get();
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
-        
+
         // Get curricula with their relationships
         $curricula = Curriculum::with(['year_level', 'semester'])
             ->orderBy('year_level_id')
@@ -101,7 +102,7 @@ class FacultyLoadController extends Controller
         $validated = $request->validate([
             'teacher_id' => 'required|exists:teachers,id',
             'curriculum_id' => 'required|exists:curricula,id',
-            'section_id' => 'required|exists:sections,id',
+            'section_id' => 'required|exists:sections,id', // This could be from previous year
             'year_level_id' => 'required|exists:year_levels,id',
             'day' => 'required|in:Monday,Tuesday,Wednesday,Thursday,Friday',
             'start_time' => 'required|date_format:H:i',
@@ -109,16 +110,28 @@ class FacultyLoadController extends Controller
             'semester_id' => 'required|exists:semesters,id'
         ]);
 
-        // dd($validated['year_level_id']);
-
         // Get active school year
         $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
         if (!$activeSchoolYear) {
             return back()->withErrors(['message' => 'Cannot create faculty load: No active school year set.']);
         }
 
+        // Get the requested section (might be from previous year)
+        $requestedSection = Section::findOrFail($validated['section_id']);
+
         try {
             DB::beginTransaction();
+
+            // Find or create matching section in current active school year
+            $activeSection = Section::firstOrCreate([
+                'section' => $requestedSection->section,
+                'year_level_id' => $validated['year_level_id'],
+                'semester_id' => $validated['semester_id'],
+                'school_year_id' => $activeSchoolYear->id
+            ], [
+                'minimum_number_students' => $requestedSection->minimum_number_students,
+                'maximum_number_students' => $requestedSection->maximum_number_students
+            ]);
 
             // Create the class schedule
             $classSchedule = ClassSchedule::create([
@@ -132,24 +145,20 @@ class FacultyLoadController extends Controller
                 ->where('faculty_loads.teacher_id', $validated['teacher_id'])
                 ->where('class_schedules.day', $validated['day'])
                 ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
-                ->where(function($query) use ($validated) {
-                    // Check for overlapping time slots
-                    $query->where(function($q) use ($validated) {
-                        // Start time is during an existing schedule
+                ->where(function ($query) use ($validated) {
+                    $query->where(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '<=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '>', $validated['start_time']);
-                    })->orWhere(function($q) use ($validated) {
-                        // End time is during an existing schedule
+                            ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '<', $validated['end_time'])
-                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
-                    })->orWhere(function($q) use ($validated) {
-                        // New schedule completely contains an existing one
+                            ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '>=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                            ->where('class_schedules.end_time', '<=', $validated['end_time']);
                     });
                 })
                 ->first();
-            
+
             if ($teacherConflict) {
                 DB::rollBack();
                 return back()->withErrors(['message' => 'Schedule conflict: This teacher already has a class during this time slot.']);
@@ -157,23 +166,19 @@ class FacultyLoadController extends Controller
 
             // Check for section schedule conflicts (same section, same time but different teacher)
             $sectionConflict = FacultyLoad::join('class_schedules', 'faculty_loads.class_schedule_id', '=', 'class_schedules.id')
-                ->where('faculty_loads.section_id', $validated['section_id'])
+                ->where('faculty_loads.section_id', $activeSection->id) // Use active section ID
                 ->where('class_schedules.day', $validated['day'])
                 ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
-                ->where(function($query) use ($validated) {
-                    // Check for overlapping time slots
-                    $query->where(function($q) use ($validated) {
-                        // Start time is during an existing schedule
+                ->where(function ($query) use ($validated) {
+                    $query->where(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '<=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '>', $validated['start_time']);
-                    })->orWhere(function($q) use ($validated) {
-                        // End time is during an existing schedule
+                            ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '<', $validated['end_time'])
-                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
-                    })->orWhere(function($q) use ($validated) {
-                        // New schedule completely contains an existing one
+                            ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         $q->where('class_schedules.start_time', '>=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                            ->where('class_schedules.end_time', '<=', $validated['end_time']);
                     });
                 })
                 ->first();
@@ -187,23 +192,23 @@ class FacultyLoadController extends Controller
             $facultyLoad = FacultyLoad::create([
                 'teacher_id' => $validated['teacher_id'],
                 'curriculum_id' => $validated['curriculum_id'],
-                'section_id' => $validated['section_id'],
+                'section_id' => $activeSection->id, // Use the active section ID
                 'year_level_id' => $validated['year_level_id'],
                 'class_schedule_id' => $classSchedule->id,
                 'semester_id' => $validated['semester_id'],
                 'school_year_id' => $activeSchoolYear->id
             ]);
 
-            // --- Automatically Assign Students to this New Load --- 
+            // Automatically Assign Students to this New Load
             $studentsToAssign = Student::where('year_level_id', $validated['year_level_id'])
-                                ->where('semester_id', $validated['semester_id'])
-                                ->where('section_id', $validated['section_id'])
-                                ->where('school_year_id', $activeSchoolYear->id)
-                                ->whereHas('status', function($query) {
-                                    $query->where('status_name', 'Enrolled');
-                                })
-                                ->pluck('id');
-        
+                ->where('semester_id', $validated['semester_id'])
+                ->where('section_id', $activeSection->id) // Use the active section ID
+                ->where('school_year_id', $activeSchoolYear->id)
+                ->whereHas('status', function ($query) {
+                    $query->where('status_name', 'Enrolled');
+                })
+                ->pluck('id');
+
             $studentLoadData = [];
             foreach ($studentsToAssign as $studentId) {
                 $studentLoadData[] = [
@@ -218,19 +223,17 @@ class FacultyLoadController extends Controller
             if (!empty($studentLoadData)) {
                 DB::table('student_loads')->insert($studentLoadData);
             }
-            // --- End Student Assignment --- 
 
             DB::commit();
 
             return redirect()->back()->with([
                 'success' => 'Faculty load created successfully and assigned to relevant students.'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Faculty Load Creation Error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
-            
+
             return back()->withErrors(['message' => 'An error occurred while creating the faculty load: ' . $e->getMessage()]);
         }
     }
@@ -292,24 +295,24 @@ class FacultyLoadController extends Controller
                 ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
                 ->where('class_schedules.day', $validated['day'])
                 ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
-                ->where(function($query) use ($validated) {
+                ->where(function ($query) use ($validated) {
                     // Check for overlapping time slots
-                    $query->where(function($q) use ($validated) {
+                    $query->where(function ($q) use ($validated) {
                         // Start time is during an existing schedule
                         $q->where('class_schedules.start_time', '<=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '>', $validated['start_time']);
-                    })->orWhere(function($q) use ($validated) {
+                            ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         // End time is during an existing schedule
                         $q->where('class_schedules.start_time', '<', $validated['end_time'])
-                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
-                    })->orWhere(function($q) use ($validated) {
+                            ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         // New schedule completely contains an existing one
                         $q->where('class_schedules.start_time', '>=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                            ->where('class_schedules.end_time', '<=', $validated['end_time']);
                     });
                 })
                 ->first();
-            
+
             if ($teacherConflict) {
                 DB::rollBack();
                 return back()->withErrors(['message' => 'Schedule conflict: This teacher already has another class during this time slot.']);
@@ -321,20 +324,20 @@ class FacultyLoadController extends Controller
                 ->where('faculty_loads.id', '!=', $facultyLoad->id) // Exclude current load being updated
                 ->where('class_schedules.day', $validated['day'])
                 ->where('faculty_loads.school_year_id', $activeSchoolYear->id)
-                ->where(function($query) use ($validated) {
+                ->where(function ($query) use ($validated) {
                     // Check for overlapping time slots
-                    $query->where(function($q) use ($validated) {
+                    $query->where(function ($q) use ($validated) {
                         // Start time is during an existing schedule
                         $q->where('class_schedules.start_time', '<=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '>', $validated['start_time']);
-                    })->orWhere(function($q) use ($validated) {
+                            ->where('class_schedules.end_time', '>', $validated['start_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         // End time is during an existing schedule
                         $q->where('class_schedules.start_time', '<', $validated['end_time'])
-                          ->where('class_schedules.end_time', '>=', $validated['end_time']);
-                    })->orWhere(function($q) use ($validated) {
+                            ->where('class_schedules.end_time', '>=', $validated['end_time']);
+                    })->orWhere(function ($q) use ($validated) {
                         // New schedule completely contains an existing one
                         $q->where('class_schedules.start_time', '>=', $validated['start_time'])
-                          ->where('class_schedules.end_time', '<=', $validated['end_time']);
+                            ->where('class_schedules.end_time', '<=', $validated['end_time']);
                     });
                 })
                 ->first();
@@ -360,12 +363,11 @@ class FacultyLoadController extends Controller
             return back()->with([
                 'success' => 'Faculty load updated successfully.'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Faculty Load Update Error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
-            
+
             return back()->withErrors(['message' => 'An error occurred while updating the faculty load: ' . $e->getMessage()]);
         }
     }
@@ -394,12 +396,11 @@ class FacultyLoadController extends Controller
             return back()->with([
                 'success' => 'Schedule deleted successfully.'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Faculty Load Deletion Error: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
-            
+
             return back()->withErrors(['message' => 'An error occurred while deleting the schedule.']);
         }
     }
