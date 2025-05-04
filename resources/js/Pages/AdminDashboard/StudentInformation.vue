@@ -542,18 +542,20 @@ const formFilteredSections = computed(() => {
       <table class="min-w-full divide-y divide-gray-200">
         <thead>
           <tr class="bg-[#1a3047] text-white">
-            <th v-for="header in tableHeaders" :key="header.key"
-              class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+            <th v-for="(header,index) in tableHeaders" :key="header.key" :class="[
+              'px-6 py-3 text-left text-xs font-medium uppercase tracking-wide',
+              index === 0 ? 'rounded-tl-lg' : '',
+            ]">
               {{ header.label }}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">
+            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-lg">
               Actions
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200" :key="JSON.stringify(students)">
           <tr v-for="(student, index) in students.data" :key="student.id"
-            :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
+            :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
             <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4  text-sm text-gray-900">
               {{ processNestedValue(student, header.key) }}
             </td>
@@ -576,7 +578,7 @@ const formFilteredSections = computed(() => {
     <div class="mt-6 flex items-center justify-between p-6" :class="{ 'pointer-events-none opacity-50': isModalOPen }">
       <div class="text-sm text-gray-700">
         Showing <span class="font-semibold">{{ students.from }}</span> to <span class="font-semibold">{{ students.to
-        }}</span> of <span class="font-semibold">{{ students.total }}</span> students
+          }}</span> of <span class="font-semibold">{{ students.total }}</span> students
       </div>
       <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination">
         <Link v-if="students.currentPage > 1" :href="students.links.prev" preserve-scroll rel="prev"

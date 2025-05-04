@@ -367,7 +367,7 @@ const processNestedValue = (item, key) => {
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     <tr v-for="(section, index) in sections.data" :key="section.id"
-                        :class="index % 2 === 0 ? 'bg-white' : 'bg-gray-200'">
+                        :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
                         <td v-for="header in tableHeaders" :key="header.key" class="px-6 py-4 text-sm text-gray-900">
                             {{ processNestedValue(section, header.key) }}
                         </td>
