@@ -1,6 +1,7 @@
 <script setup>
 import StudentDashboardLayout from '../../components/StudentDashboardLayout.vue';
-import { format } from 'date-fns'; // Import the format function
+import { ref } from 'vue';
+import { format } from 'date-fns';
 
 defineOptions({
     layout: StudentDashboardLayout
@@ -10,10 +11,12 @@ const props = defineProps({
     announcements: {
         type: Array,
         default: () => []
+    },
+    auth: {
+        type: Object,
+        default: () => ({})
     }
 });
-
-console.log(props.announcements)
 
 const formatDate = (dateString) => {
     if (!dateString) {
@@ -21,10 +24,19 @@ const formatDate = (dateString) => {
     }
     try {
         const date = new Date(dateString);
-        return format(date, 'MMM dd, yyyy hh:mm a'); // Keep the adjusted format
+        return format(date, 'MMM dd, yyyy hh:mm a');
     } catch (error) {
-        // console.error('Error formatting date:', error);
         return 'Invalid Date';
+    }
+};
+
+const getAnnouncementScope = (announcement) => {
+    if (announcement.is_school_wide) {
+        return 'School-wide announcement';
+    } else if (announcement.is_year_level_wide) {
+        return `For all ${props.auth.user.student.year_level} sections`;
+    } else {
+        return 'For your section only';
     }
 };
 </script>
@@ -36,7 +48,12 @@ const formatDate = (dateString) => {
         <div v-if="props.announcements.length > 0">
             <div v-for="announcement in props.announcements" :key="announcement.id"
                 class="bg-white shadow rounded-md p-6 mb-4">
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ announcement.title_announcement }}</h3>
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">{{ announcement.title_announcement }}</h3>
+                    <span class="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                        {{ getAnnouncementScope(announcement) }}
+                    </span>
+                </div>
                 <p class="text-gray-600 mb-4">{{ announcement.description_announcement }}</p>
 
                 <div class="border-t border-gray-200 pt-4">

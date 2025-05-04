@@ -13,27 +13,11 @@
                     </th>
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
-                        Prelim Grade
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
-                        Midterm Grade
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
-                        Final Grade
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
-                        Raw Grade
+                        Course Code
                     </th>
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
                         GWA Equivalent
-                    </th>
-                    <th scope="col"
-                        class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
-                        Total GWA
                     </th>
                     <th scope="col"
                         class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider bg-[#1a3047]">
@@ -47,25 +31,13 @@
                         {{ grade.semester_id }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.year_level_id }}
+                        {{ grade.year_level }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.prelim_grade }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.midterm_grade }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.final_grade }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.raw_grade }}
+                        {{ grade.course_code }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {{ grade.gwa_equivalent }}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {{ grade.total_gwa }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <span
