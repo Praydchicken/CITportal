@@ -18,6 +18,7 @@ console.log(props.gradesByLevel);
 </script>
 
 <template>
+    <Head title="Grade Report" />
     <div>
         <div v-if="props.gradesByLevel.length === 0" class="text-center py-12 bg-white rounded-lg shadow-sm">
             <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24"

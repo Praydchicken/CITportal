@@ -1,6 +1,5 @@
 <script setup>
 import StudentDashboardLayout from '../../components/StudentDashboardLayout.vue';
-import { ref } from 'vue';
 import { format } from 'date-fns'; // Import the format function
 
 defineOptions({
@@ -31,6 +30,7 @@ const formatDate = (dateString) => {
 </script>
 
 <template>
+    <Head title="Announcements" />
     <div>
         <h2 class="text-xl font-semibold mb-4">Teacher Announcements</h2>
         <div v-if="props.announcements.length > 0">

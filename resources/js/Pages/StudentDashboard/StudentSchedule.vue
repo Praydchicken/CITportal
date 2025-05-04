@@ -42,10 +42,47 @@ const processedSchedule = computed(() => {
   }));
 });
 
-// Time slots from 7:00 to 20:00 (8 PM)
-const timeSlots = Array.from({ length: 14 }, (_, i) => {
-  const hour = i + 7;
-  return `${hour.toString().padStart(2, '0')}:00`;
+// Determine the earliest and latest times from the schedule
+const scheduleTimes = computed(() => {
+  if (!processedSchedule.value.length) {
+    return { startTime: '07:00', endTime: '20:00' }; // Default times
+  }
+
+  let earliestTime = '23:59';
+  let latestTime = '00:00';
+
+  processedSchedule.value.forEach(item => {
+    if (item.start_time < earliestTime) {
+      earliestTime = item.start_time;
+    }
+    if (item.end_time > latestTime) {
+      latestTime = item.end_time;
+    }
+  });
+
+  const startHour = parseInt(earliestTime.split(':')[0]);
+  const endHour = parseInt(latestTime.split(':')[0]) + (parseInt(latestTime.split(':')[1]) > 0 ? 1 : 0);
+
+  return {
+    startTime: `${startHour.toString().padStart(2, '0')}:00`, // Removed Math.max
+    endTime: `${endHour.toString().padStart(2, '0')}:00`,   // Removed Math.min (and adjusted logic)
+  };
+});
+
+// Time slots based on the earliest and latest times
+const timeSlots = computed(() => {
+  const startTimeParts = scheduleTimes.value.startTime.split(':');
+  const endTimeParts = scheduleTimes.value.endTime.split(':');
+  let startHour = parseInt(startTimeParts[0]);
+  const endHour = parseInt(endTimeParts[0]);
+  const slots = [];
+
+  for (let i = startHour; i <= endHour; i++) {
+    const hour = i % 12 === 0 ? 12 : i % 12;
+    const period = i < 12 || i === 24 ? 'AM' : 'PM';
+    slots.push(`${hour.toString().padStart(2, '0')}:00 ${period}`);
+  }
+  return slots;
 });
 
 // Days of the week in order
@@ -65,36 +102,40 @@ const groupedSchedule = computed(() => {
     if (!daysOfWeek.includes(item.day)) return;
 
     const daySchedule = grouped[item.day];
+    const scheduleStartHour = parseInt(scheduleTimes.value.startTime.split(':')[0]);
 
-    // Convert time to minutes since 7:00
-    const startMinutes = convertTimeToMinutes(item.start_time);
-    const endMinutes = convertTimeToMinutes(item.end_time);
+    // Convert time to minutes since the adjusted start time
+    const startMinutes = (parseInt(item.start_time.split(':')[0]) - scheduleStartHour) * 60 + parseInt(item.start_time.split(':')[1]);
+    const endMinutes = (parseInt(item.end_time.split(':')[0]) - scheduleStartHour) * 60 + parseInt(item.end_time.split(':')[1]);
     const duration = endMinutes - startMinutes;
 
-    // Calculate position and height
+    // Calculate position and height (adjusting the base for top calculation)
+    const minutesPerHour = 60;
+    const remPerHour = 4;
+    const topOffsetRem = (startMinutes / minutesPerHour) * remPerHour;
+    const heightRem = (duration / minutesPerHour) * remPerHour;
+
     const position = {
       ...item,
-      top: `${(startMinutes / 60) * 4}rem`, // 4rem per hour
-      height: `${(duration / 60) * 4}rem`,  // 4rem per hour
+      top: `${topOffsetRem}rem`,
+      height: `${heightRem}rem`,
       zIndex: 10
     };
 
     daySchedule.push(position);
   });
 
-  // Sort each day's schedule by start time
+  // Sort each day's schedule by start time and resolve overlaps
   daysOfWeek.forEach(day => {
     grouped[day].sort((a, b) => {
-      return convertTimeToMinutes(a.start_time) - convertTimeToMinutes(b.start_time);
+      return convertTimeToMinutesAdjusted(a.start_time, scheduleTimes.value.startTime) - convertTimeToMinutesAdjusted(b.start_time, scheduleTimes.value.startTime);
     });
 
-    // Detect and resolve overlaps
     for (let i = 1; i < grouped[day].length; i++) {
-      const prevEnd = convertTimeToMinutes(grouped[day][i - 1].end_time);
-      const currStart = convertTimeToMinutes(grouped[day][i].start_time);
+      const prevEndMinutes = convertTimeToMinutesAdjusted(grouped[day][i - 1].end_time, scheduleTimes.value.startTime);
+      const currStartMinutes = convertTimeToMinutesAdjusted(grouped[day][i].start_time, scheduleTimes.value.startTime);
 
-      if (currStart < prevEnd) {
-        // If overlapping, offset the current item
+      if (currStartMinutes < prevEndMinutes) {
         grouped[day][i].zIndex = 20;
         grouped[day][i].left = '50%';
         grouped[day][i].width = '48%';
@@ -108,10 +149,11 @@ const groupedSchedule = computed(() => {
   return grouped;
 });
 
-// Convert HH:MM to minutes since 7:00
-function convertTimeToMinutes(time) {
+// Convert HH:MM to minutes since the adjusted start time
+function convertTimeToMinutesAdjusted(time, startTime) {
   const [hours, minutes] = time.split(':').map(Number);
-  return (hours - 7) * 60 + minutes;
+  const [startHours] = startTime.split(':').map(Number);
+  return (hours - startHours) * 60 + minutes;
 }
 
 // Generate pastel color for subjects
@@ -131,28 +173,25 @@ function getSubjectColor(subject) {
 </script>
 
 <template>
+  <Head title="Schedule"/>
   <div class="p-6">
     <h1 class="text-2xl font-bold text-gray-800 mb-6">My Class Schedule</h1>
 
     <div v-if="classSchedule.length > 0" class="schedule-container bg-white rounded-lg shadow-lg">
-      <!-- Schedule Grid -->
       <div class="grid grid-cols-6 min-w-[1200px]">
-        <!-- Day Headers -->
         <div v-for="day in daysOfWeek" :key="day"
           class="sticky top-0 z-30 bg-[#1a3047] text-white p-3 border-r border-gray-600 text-center font-semibold">
           {{ day }}
         </div>
 
-        <!-- Time Slots and Classes -->
         <template v-for="day in daysOfWeek" :key="`col-${day}`">
-          <div class="relative border-r border-gray-200 min-h-[52rem]">
-            <!-- Time markers -->
+          <div class="relative border-r border-gray-200" :style="{ minHeight: `${(parseInt(scheduleTimes.endTime.split(':')[0]) - parseInt(scheduleTimes.startTime.split(':')[0]) + 1) * 4}rem` }">
             <div v-for="time in timeSlots" :key="`${day}-${time}`"
-              class="h-16 border-b border-gray-200 text-xs text-gray-500 pl-1 pt-1">
+              class="h-16 border-b border-gray-200 text-xs text-gray-500 pl-1 pt-1"
+              :style="{ top: `${(parseInt(time.split(':')[0]) - (parseInt(scheduleTimes.startTime.split(':')[0]))) * 4}rem` }">
               {{ time }}
             </div>
 
-            <!-- Class blocks -->
             <div v-for="(classItem, index) in groupedSchedule[day]" :key="`${day}-${classItem.start_time}-${index}`"
               :class="[
                 'absolute rounded-lg border shadow-sm p-2 overflow-y-auto',
@@ -165,7 +204,7 @@ function getSubjectColor(subject) {
                 width: classItem.width || '96%',
                 'z-index': classItem.zIndex || 10
               }">
-              <h3 class="font-semibold text-gray-800 text-sm truncate">
+              <h3 class="font-semibold text-gray-800 text-sm">
                 {{ classItem.subject }}
               </h3>
               <p class="text-xs text-gray-600">{{ classItem.course_code }}</p>
