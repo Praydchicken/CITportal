@@ -41,7 +41,7 @@ class UserStudentSeeder extends Seeder
             $firstName = $faker->firstName;
             $middleName = $faker->firstName;
             $lastName = $faker->lastName;
-            $email = strtolower($firstName . $i . '@example.com');
+            $email = strtolower($firstName . $i . '@spcc.edu.ph');
 
             $user = User::create([
                 'user_type_id' => 2,
