@@ -15,6 +15,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentGradeController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\ClassRoomController;
+use App\Http\Controllers\EmailTestController;
 use App\Http\Controllers\ForStudentGradeViewController;
 use App\Http\Controllers\StudentScheduleController;
 use App\Http\Controllers\PrintTORController;
@@ -59,6 +60,9 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/reset-password/{token}', [ResetPasswordController::class, 'resetForm'])->name('password.reset');
     Route::post('/reset-password', [ResetPasswordController::class, 'resetHandler'])->name('password.update');
+
+    Route::get('/test-notifications', [EmailTestController::class, 'ClassNotificationTest']);
+    
 });
 
 // This is for the auth
