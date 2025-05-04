@@ -8,11 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
 
 class Student extends Model
 {
     /** @use HasFactory<\Database\Factories\StudentFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Notifiable;
 
     protected $dates = ['deleted_at'];
 
@@ -80,4 +81,10 @@ class Student extends Model
             }
         });
     }
+
+    public function routeNotificationForMail()
+{
+    return $this->user?->email;
+}
+
 }
