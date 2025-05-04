@@ -2,30 +2,12 @@
 import { defineProps, defineEmits } from 'vue';
 
 const props = defineProps({
-  headers: {
-    type: Array,
-    required: true
-  },
-  data: {
-    type: Array,
-    required: true
-  },
-  actions: {
-    type: Boolean,
-    default: false
-  },
-  actionButtons: {
-    type: Array,
-    default: () => []
-  },
-  rowClickable: {
-    type: Boolean,
-    default: false
-  },
-  rowKey: {
-    type: String,
-    default: 'id' // Default key property to use
-  }
+  headers: { type: Array, required: true },
+  data: { type: Array, required: true },
+  actions: { type: Boolean, default: false },
+  actionButtons: { type: Array, default: () => [] },
+  rowClickable: { type: Boolean, default: false },
+  rowKey: { type: String, default: 'id' }
 });
 
 const emit = defineEmits(['row-click']);
@@ -44,6 +26,7 @@ const handleRowClick = (item) => {
 };
 </script>
 
+
 <template>
   <div class="w-full">
     <table class="min-w-full divide-y divide-gray-200">
@@ -59,19 +42,14 @@ const handleRowClick = (item) => {
       </thead>
 
       <!-- Table Body -->
-      <tbody class="bg-white divide-y divide-gray-200">
+      <tbody class="divide-y divide-gray-200">
         <template v-for="(item, index) in data" :key="item[rowKey] || index">
-          <!-- Main Row -->
-          <tr @click="handleRowClick(item)" :class="[
-            'transition-colors duration-200',
-            rowClickable ? 'cursor-pointer hover:bg-gray-300' : '',
-            index % 2 === 0 ? 'bg-gray-200' : 'bg-white'
+          <tr @click="handleRowClick(item)" :class="[ 
+            rowClickable ? 'cursor-pointer hover:bg-gray-300' : '', 
+            index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200', 
+            'transition-colors duration-200'
           ]">
-            <td v-for="header in headers" :key="`${item[rowKey] || index}-${header.key}`" :class="[
-              'p-4 text-center',
-              header.key === headers[0].key ? 'rounded-l-lg' : '',
-              header.key === headers[headers.length - 1].key && !actions ? 'rounded-r-lg' : ''
-            ]">
+            <td v-for="header in headers" :key="`${item[rowKey] || index}-${header.key}`" class="p-4 text-center">
               {{ getNestedValue(item, header.key) }}
             </td>
             <td v-if="actions" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
