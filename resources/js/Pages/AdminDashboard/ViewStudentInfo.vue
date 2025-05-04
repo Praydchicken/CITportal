@@ -4,7 +4,7 @@ import { defineProps, reactive, watch, computed } from "vue";
 import { router } from '@inertiajs/vue3';
 import { usePage } from '@inertiajs/vue3' // or @inertiajs/react if using React
 import Notification from '../../components/Notification.vue';
-import LogoutBtn from '../../components/LogoutBtn.vue';
+import LinkBtn from '../../Components/LinkBtn.vue';
 
 defineOptions({
   layout: DashboardLayout // ✅ Assign the layout
@@ -66,7 +66,7 @@ const showNotification = (message, type = 'success') => {
 };
 
 const printTOR = () => {
-    router.visit(`/admin/preview/print/tor/${studentNo}`)
+  window.open(`/admin/preview/print/tor/${studentNo}`, '_blank');
 }
 
 const promoteStudent = (studentNo, promotionType) => {
@@ -146,8 +146,10 @@ const fullName = computed(() => {
             </div>
         </div>
 
+      
        <!-- Reusable Table Component -->
         <div class="overflow-x-auto mt-8 pb-6 pt-6">
+          <LinkBtn routeName="admin.student.info" label="Go Back" class="mr-3"></LinkBtn>
              <button @click="printTOR" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded mb-3">
                  Print Grades
             </button>
