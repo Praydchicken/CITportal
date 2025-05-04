@@ -35,7 +35,7 @@ class FacultyLoadController extends Controller
             'facultyLoads.semester'
         ])->get();
 
-        $sections = Section::with('yearLevel')
+        $sections = Section::with(['yearLevel', 'semester']) // Add semester relationship
             ->select('sections.*')
             ->join('year_levels', 'sections.year_level_id', '=', 'year_levels.id')
             ->get()
@@ -45,7 +45,8 @@ class FacultyLoadController extends Controller
                     'section' => $section->section,
                     'year_level' => $section->yearLevel->year_level,
                     'year_level_id' => $section->year_level_id,
-                    'school_year_id' => $section->school_year_id // Add this line
+                    'semester_id' => $section->semester_id, // Add this line
+                    'school_year_id' => $section->school_year_id
                 ];
             });
         $yearLevels = YearLevel::all();

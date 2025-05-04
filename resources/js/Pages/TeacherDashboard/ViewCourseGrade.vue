@@ -30,16 +30,34 @@ const props = defineProps({
     }
 });
 
-console.log(props.student)
+// console.log(props.courses)
 
 // Get teacher's assigned subjects from auth data - more defensive approach
 
 // Filter courses to only show subjects assigned to the teacher
-const assignedCurriculumIds = computed(() => page.props.assignedCurriculumIds || []);
+const assignedCurriculumIds = computed(() => {
+    const ids = page.props?.assignedCurriculumIds;
+    console.log('Raw assignedCurriculumIds:', ids); // Debug log
+
+    // Handle various cases where the data might not be an array
+    if (!ids) return [];
+    if (Array.isArray(ids)) return ids;
+    if (typeof ids === 'object' && ids !== null) return Object.values(ids);
+
+    // If it's a single ID (number or string), wrap it in an array
+    return [ids].filter(Boolean);
+});
 
 const assignedCourses = computed(() => {
+    const ids = assignedCurriculumIds.value;
+    console.log('Processed assignedCurriculumIds:', ids); // Debug log
+
+    // Ensure we're working with an array
+    const idArray = Array.isArray(ids) ? ids : [ids].filter(Boolean);
+
     return props.courses.filter(course =>
-        assignedCurriculumIds.value.includes(course.id)
+        idArray.includes(course.id) ||
+        idArray.some(id => id == course.id) // Loose comparison for type safety
     );
 });
 
@@ -624,7 +642,7 @@ const changeSchoolYear = (yearId) => {
                                                     'N/A' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.final_grade ? Math.floor(course.grade.final_grade) : 'N/A'
-                                            }}</td>
+                                                }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.raw_grade ? Math.floor(course.grade.raw_grade) : 'N/A' }}
                                             </td>

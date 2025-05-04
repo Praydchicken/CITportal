@@ -3,7 +3,7 @@ import DashboardLayout from '../../components/AdminDashboardLayout.vue';
 import ReusableTable from '../../components/ReusableTable.vue';
 import Notification from '../../components/Notification.vue';
 import ReusableModal from '../../components/ReusableModal.vue';
-import { ref, reactive, computed, watch } from 'vue';
+import { ref, reactive, computed, watch, nextTick } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import Overlay from '../../components/Overlay.vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
@@ -175,6 +175,8 @@ const openModal = (faculty = null) => {
 const closeModal = () => {
   isModalOpen.value = false;
   isEditMode.value = false;
+  isEditLoadModalOpen.value = false;
+  isScheduleModalOpen.value = false;
   form.reset();
   form.clearErrors();
 };
@@ -259,6 +261,7 @@ const scheduleForm = useForm({
 const openScheduleModal = (faculty) => {
   scheduleForm.teacher_id = faculty.id;
   isScheduleModalOpen.value = true;
+  // isModalOpen.value = true;
 };
 
 const closeScheduleModal = () => {
@@ -307,69 +310,42 @@ watch(selectedFaculty, (newValue) => {
 
 // Computed property for filtered sections
 const filteredSections = computed(() => {
-  // If no year level selected, return empty array
-  if (!scheduleForm.year_level_id) return [];
-
-  // Get active school year ID
-  const activeYearId = activeSchoolYear.value?.id;
-  if (!activeYearId) {
-    console.warn('No active school year set');
+  if (!scheduleForm.year_level_id || !scheduleForm.semester_id) {
     return [];
   }
 
-  // Filter sections by year level and active school year
-  const filtered = props.sections.filter(section => {
-    return (
-      section.year_level_id === parseInt(scheduleForm.year_level_id) &&
-      section.school_year_id === activeYearId
-    );
-  });
+  const yearLevelId = Number(scheduleForm.year_level_id);
+  const semesterId = Number(scheduleForm.semester_id);
+  const activeYearId = Number(activeSchoolYear.value?.id);
 
-  console.log('Filtered sections:', filtered); // Debug log
-  return filtered;
+  return props.sections.filter(section => {
+    if (!section) return false;
+
+    // Match by year_level_id and semester_id
+    return Number(section.year_level_id) === yearLevelId &&
+      Number(section.semester_id) === semesterId &&
+      Number(section.school_year_id) === activeYearId;
+  });
 });
 
 // Reset section when year level changes
-watch(() => scheduleForm.year_level_id, (newYearLevel) => {
-  scheduleForm.section_id = ''; // Clear section selection when year level changes
+watch([() => scheduleForm.year_level_id, () => scheduleForm.semester_id], () => {
+  scheduleForm.section_id = ''; // Clear section selection when filters change
 });
 
 // Computed property for filtered curricula
 const filteredCurricula = computed(() => {
   if (!scheduleForm.year_level_id || !scheduleForm.semester_id) {
-    console.log('No year level or semester selected');
     return [];
   }
 
   const yearLevelId = parseInt(scheduleForm.year_level_id);
   const semesterId = parseInt(scheduleForm.semester_id);
 
-  console.log('Filtering curricula:', {
-    yearLevelId,
-    semesterId,
-    totalCurricula: props.curricula.length
+  return props.curricula.filter(curriculum => {
+    return parseInt(curriculum.year_level_id) === yearLevelId &&
+      parseInt(curriculum.semester_id) === semesterId;
   });
-
-  const filtered = props.curricula.filter(curriculum => {
-    const currYearLevelId = parseInt(curriculum.year_level_id);
-    const currSemesterId = parseInt(curriculum.semester_id);
-
-    console.log('Checking curriculum:', {
-      id: curriculum.id,
-      name: curriculum.subject_name,
-      yearLevel: { curr: currYearLevelId, form: yearLevelId, match: currYearLevelId === yearLevelId },
-      semester: { curr: currSemesterId, form: semesterId, match: currSemesterId === semesterId }
-    });
-
-    return currYearLevelId === yearLevelId && currSemesterId === semesterId;
-  });
-
-  console.log('Filtered curricula:', {
-    count: filtered.length,
-    items: filtered.map(c => ({ id: c.id, name: c.subject_name }))
-  });
-
-  return filtered;
 });
 
 // Reset curriculum when year level or semester changes
@@ -406,16 +382,28 @@ const getSemesterName = (semesterId) => {
 const isEditLoadModalOpen = ref(false);
 const selectedLoad = ref(null);
 
-const openEditLoadModal = (load) => {
+const openEditLoadModal = async (load) => {
   selectedLoad.value = load;
+
+  // Reset the form first
+  scheduleForm.reset();
+
+  // Set the basic values that don't depend on computed properties
   scheduleForm.teacher_id = load.teacher_id;
-  scheduleForm.curriculum_id = load.curriculum_id;
-  scheduleForm.section_id = load.section_id;
   scheduleForm.year_level_id = load.year_level_id;
   scheduleForm.semester_id = load.semester_id;
   scheduleForm.day = load.schedule?.day || '';
   scheduleForm.start_time = load.schedule?.start_time || '';
   scheduleForm.end_time = load.schedule?.end_time || '';
+
+  // Wait for the next tick to ensure computed properties are updated
+  await nextTick();
+
+  // Now set the dependent values
+  scheduleForm.curriculum_id = load.curriculum_id;
+  scheduleForm.section_id = load.section_id;
+
+  // Open the modal
   isEditLoadModalOpen.value = true;
 };
 
@@ -575,7 +563,8 @@ const uniqueSections = computed(() => {
       <Notification :show="notification.show" :message="notification.message" :type="notification.type" />
     </Teleport>
 
-    <Overlay :show="isModalOpen" @click="closeModal" />
+    <Overlay :show="isModalOpen || isScheduleModalOpen || isEditLoadModalOpen" @click="closeModal" />
+
 
     <!-- Active School Year Banner -->
     <div v-if="activeSchoolYear"
@@ -934,7 +923,9 @@ const uniqueSections = computed(() => {
           <select id="section" v-model="scheduleForm.section_id"
             class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             :class="{ 'border-red-500': scheduleForm.errors.section_id }">
-            <option value="" disabled selected>Select Section</option>
+            <option value="" disabled selected>
+              {{ filteredSections.length ? 'Select Section' : 'No matching sections found' }}
+            </option>
             <option v-for="section in filteredSections" :key="section.id" :value="section.id">
               {{ section.section }}
             </option>
