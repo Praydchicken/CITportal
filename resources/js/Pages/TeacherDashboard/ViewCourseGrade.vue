@@ -624,7 +624,7 @@ const changeSchoolYear = (yearId) => {
                                                     'N/A' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.final_grade ? Math.floor(course.grade.final_grade) : 'N/A'
-                                                }}</td>
+                                            }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.raw_grade ? Math.floor(course.grade.raw_grade) : 'N/A' }}
                                             </td>

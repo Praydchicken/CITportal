@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\User;
 use App\Models\Curriculum;
 use App\Models\FacultyLoad;
+use App\Models\SchoolYear;
 use App\Models\Section;
 use App\Models\StudentGrade;
 use Illuminate\Support\Facades\DB;
@@ -28,10 +29,10 @@ class ViewStudentInfoController extends Controller
         $email = $student->user->email;
 
         // Get ALL curricula the student has ever been enrolled in
-        $allCurricula = Curriculum::whereHas('studentGrades', function($query) use ($id) {
-                $query->where('student_id', $id);
-            })
-            ->orWhere(function($query) use ($student) {
+        $allCurricula = Curriculum::whereHas('studentGrades', function ($query) use ($id) {
+            $query->where('student_id', $id);
+        })
+            ->orWhere(function ($query) use ($student) {
                 // Include current curriculum even if no grades exist yet
                 $query->where('year_level_id', $student->year_level_id)
                     ->where('semester_id', $student->semester_id);
@@ -46,16 +47,16 @@ class ViewStudentInfoController extends Controller
             ->keyBy('curriculum_id');
 
         // Organize curricula by semester/year level
-        $organizedCurricula = $allCurricula->groupBy(function($item) {
+        $organizedCurricula = $allCurricula->groupBy(function ($item) {
             return 'Year ' . $item->year_level_id . ' - ' . $item->semester->semester_name;
         });
 
         // Merge grades into the curriculum subjects
-        $curriculaWithGrades = $organizedCurricula->map(function($curriculumGroup, $groupName) use ($grades, $student) {
+        $curriculaWithGrades = $organizedCurricula->map(function ($curriculumGroup, $groupName) use ($grades, $student) {
             return [
                 'group_name' => $groupName,
-                'is_current' => $curriculumGroup->first()->year_level_id == $student->year_level_id && 
-                            $curriculumGroup->first()->semester_id == $student->semester_id,
+                'is_current' => $curriculumGroup->first()->year_level_id == $student->year_level_id &&
+                    $curriculumGroup->first()->semester_id == $student->semester_id,
                 'subjects' => $curriculumGroup->map(function ($subject) use ($grades) {
                     $grade = $grades->get($subject->id);
 
@@ -101,17 +102,29 @@ class ViewStudentInfoController extends Controller
     public function promote($studentNo)
     {
         try {
-            // Getting the student with section table, year level table, and status table where it match the student_number column name to the $StudentNo value;
-            $student = Student::with(['section', 'yearLevel', 'status'])
-                        ->where('student_number', $studentNo)
-                        ->firstOrFail();
+            // Get the currently active school year
+            $activeSchoolYear = SchoolYear::where('school_year_status', 'Active')->first();
 
-             // Check if there are any rejected or pending grades for the student in the current semester and year level
+            if (!$activeSchoolYear) {
+                return back()->with([
+                    'flash' => [
+                        'error' => 'No active school year found',
+                        'success' => false
+                    ]
+                ]);
+            }
+
+            // Getting the student with section table, year level table, and status table
+            $student = Student::with(['section', 'yearLevel', 'status'])
+                ->where('student_number', $studentNo)
+                ->firstOrFail();
+
+            // Check if there are any rejected or pending grades
             $hasUnapprovedGrades = StudentGrade::where('student_id', $student->id)
-                                                ->where('year_level_id', $student->year_level_id)
-                                                ->where('semester_id', $student->semester_id)
-                                                ->whereIn('grade_status', ['REJECTED', 'PENDING'])
-                                                ->exists();
+                ->where('year_level_id', $student->year_level_id)
+                ->where('semester_id', $student->semester_id)
+                ->whereIn('grade_status', ['REJECTED', 'PENDING'])
+                ->exists();
 
             if ($hasUnapprovedGrades) {
                 return back()->with([
@@ -122,31 +135,29 @@ class ViewStudentInfoController extends Controller
                 ]);
             }
 
-            // Getting the curriculum where it match the year level id to the $student->year_level_id and count the result of it
+            // Check curriculum requirements
             $curriculumCount = Curriculum::where('year_level_id', $student->year_level_id)
-                                ->where('semester_id', $student->semester_id)
-                                ->count();
+                ->where('semester_id', $student->semester_id)
+                ->count();
 
-            // Count the grade that satistifed the where method
             $passedCount = StudentGrade::where('student_id', $student->id)
-                                ->where('year_level_id', $student->year_level_id)
-                                ->where('semester_id', $student->semester_id)
-                                ->where('grade_status', 'APPROVED')
-                                ->where('grade_remarks', 'PASSED')
-                                ->count();
+                ->where('year_level_id', $student->year_level_id)
+                ->where('semester_id', $student->semester_id)
+                ->where('grade_status', 'APPROVED')
+                ->where('grade_remarks', 'PASSED')
+                ->count();
 
-            // check if the graduating student is 4th yeat and currently in the second semester
+            // Graduation check
             $isGraduating = ($student->year_level_id == 4 && $student->semester_id == 2);
-        
-            // check if the isGraduating is true and passedcount is equal to the count of curriculum then if its true updaye the student status into graduated
+
             if ($isGraduating && $passedCount === $curriculumCount) {
                 $student->update([
-                    'student_status_id' => 2 // Graduated
+                    'student_status_id' => 2, // Graduated
+                    'school_year_id' => $activeSchoolYear->id // Ensure graduation is recorded in current school year
                 ]);
 
-                // 2. Remove student loads (since they are no longer enrolled in subjects)
                 DB::table('student_loads')->where('student_id', $student->id)->delete();
-                
+
                 return back()->with([
                     'flash' => [
                         'success' => 'Student has successfully graduated!',
@@ -155,8 +166,7 @@ class ViewStudentInfoController extends Controller
                 ]);
             }
 
-            // Prevent the student for promotion
-            // passedCount = 8 and the curriculumCount = 9 meaning it is true because 8 is not equal to 9. Meaning the student did not passed all the subjects
+            // Prevent promotion if not all subjects passed
             if ($curriculumCount === 0 || $passedCount !== $curriculumCount) {
                 return back()->with([
                     'flash' => [
@@ -171,7 +181,6 @@ class ViewStudentInfoController extends Controller
             $currentSemester = $student->semester_id;
 
             if ($promotionType === 'year') {
-                // checking if the student finished the 2nd semester of the year level
                 if ($currentSemester !== 2) {
                     return back()->with([
                         'flash' => [
@@ -197,53 +206,48 @@ class ViewStudentInfoController extends Controller
                 $newSemester = $currentSemester + 1;
             }
 
-            // Getting the section name from the students current section
+            // Get section letter from current section
             $section = $student->section->section;
-
-            // Takes the last character of the section string and make sure it is a Upper case letter
-            // 101 a = gets the "a" because it is the last character and with strtoupper convert the "a" to "A"
             $sectionLetter = strtoupper(substr($section, -1));
 
-            // Checks if the last character is a letter, if not character the default is 'A'
             if (!ctype_alpha($sectionLetter)) {
                 $sectionLetter = 'A';
             }
 
             $newSectionCode = ($newYearLevel * 100 + $newSemester) . $sectionLetter;
 
-            $schoolYearId = $student->section->school_year_id;
-
+            // Check if section exists in CURRENT ACTIVE SCHOOL YEAR
             $newSection = Section::where([
                 'year_level_id' => $newYearLevel,
                 'semester_id' => $newSemester,
                 'section' => $newSectionCode,
-                'school_year_id' => $schoolYearId
+                'school_year_id' => $activeSchoolYear->id
             ])->first();
-
-            // dd($newSection);
 
             if (!$newSection) {
                 return back()->with([
                     'flash' => [
-                        'error' => "Section {$newSectionCode} not found.",
+                        'error' => "Please add section {$newSectionCode} for the current active school year before promoting the student.",
                         'success' => false
                     ]
                 ]);
             }
 
+            // Update student with new section in active school year
             $student->update([
                 'year_level_id' => $newYearLevel,
                 'semester_id' => $newSemester,
                 'section_id' => $newSection->id,
-                'student_status_id' => 1
+                'student_status_id' => 1,
+                'school_year_id' => $activeSchoolYear->id // Explicitly update the school_year_id
             ]);
 
-            // Remove old student loads (from previous section/semester)
+            // Remove old student loads
             DB::table('student_loads')
                 ->where('student_id', $student->id)
                 ->delete();
 
-            // ✅ Assign new faculty loads based on new section
+            // Assign new faculty loads based on new section
             $facultyLoadsToAssign = FacultyLoad::where('section_id', $newSection->id)->pluck('id');
 
             $newStudentLoadData = [];
@@ -256,7 +260,6 @@ class ViewStudentInfoController extends Controller
                 ];
             }
 
-            // Bulk insert the new loads
             if (!empty($newStudentLoadData)) {
                 DB::table('student_loads')->insert($newStudentLoadData);
             }
@@ -267,13 +270,13 @@ class ViewStudentInfoController extends Controller
                     'data' => [
                         'new_year_level' => $newYearLevel,
                         'new_semester' => $newSemester,
-                        'new_section' => $newSectionCode
+                        'new_section' => $newSectionCode,
+                        'new_school_year' => $activeSchoolYear->school_year,
+                        'new_school_year_id' => $activeSchoolYear->id // Include ID in response for debugging
                     ]
                 ]
             ]);
-
         } catch (\Exception $e) {
-            dd($e->getMessage());
             return back()->with([
                 'flash' => [
                     'error' => 'Promotion failed: ' . $e->getMessage(),

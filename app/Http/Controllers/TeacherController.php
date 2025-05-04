@@ -22,26 +22,26 @@ class TeacherController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-    {   
+    {
         // Get authenticated user
         $user = Auth::user();
 
         // Get teacher record with relationships
         $teacher = Teacher::where('user_id', $user->id)
-            ->with(['user', 'schoolYear', 'facultyLoads' => function($query) {
+            ->with(['user', 'schoolYear', 'facultyLoads' => function ($query) {
                 $query->with([
-                    'curriculum', 
-                    'section.students', 
-                    'yearLevel', 
-                    'schedule', 
+                    'curriculum',
+                    'section.students',
+                    'yearLevel',
+                    'schedule',
                     'semester',
-                   
+
                 ]);
             }])
             ->first();
-        
+
         // dd($teacher);
-    
+
         // get the grade student
         $teacherStudentGrades = Teacher::where('user_id', $user->id)->with('studentGrades')->get();
         // dd($teacherStudentGrades);
@@ -96,7 +96,7 @@ class TeacherController extends Controller
         // dd($studentIds);
 
         // Get teacher's class schedule
-        $classSchedule = $teacher->facultyLoads->map(function($load) {
+        $classSchedule = $teacher->facultyLoads->map(function ($load) {
             return [
                 'subject' => $load->curriculum->subject_name,
                 'course_code' => $load->curriculum->course_code,
@@ -140,7 +140,7 @@ class TeacherController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-   public function store(Request $request)
+    public function store(Request $request)
     {
         $validated = $request->validate([
             'first_name' => 'required|string|max:50',
@@ -153,7 +153,7 @@ class TeacherController extends Controller
         ]);
 
         // Generate password based on first name and last name
-        $rawPassword = strtolower($request->first_name . $request->last_name); // e.g., juandelacruz
+        $rawPassword = strtolower($request->first_name . $request->last_name);
 
         try {
             DB::beginTransaction();
@@ -176,9 +176,14 @@ class TeacherController extends Controller
                 'phone_number' => $validated['phone_number'] ?? 'N/A',
                 'address' => $validated['address'],
             ]);
+
             DB::commit();
 
-            return back()->with('success', 'Teacher added successfully!');
+            // Return with the updated list of teachers
+            return redirect()->back()->with([
+                'success' => 'Teacher added successfully!',
+                'teachers' => Teacher::with('user')->latest()->get() // Return fresh list
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Teacher creation failed: ' . $e->getMessage());
@@ -246,7 +251,6 @@ class TeacherController extends Controller
             DB::commit();
 
             return back()->with('success', 'Teacher updated successfully!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Teacher update error: ' . $e->getMessage());
@@ -262,20 +266,20 @@ class TeacherController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             // Get the user_id before deleting the teacher
             $userId = $teacher->user_id;
-            
+
             // Delete the teacher record
             $teacher->delete();
-            
+
             // Delete the associated user record
             if ($userId) {
                 User::where('id', $userId)->delete();
             }
-            
+
             DB::commit();
-            
+
             return back()->with('success', 'Teacher deleted successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -284,5 +288,4 @@ class TeacherController extends Controller
             return back()->withErrors(['message' => 'An error occurred while deleting the teacher.']);
         }
     }
-
 }

@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Teacher;
 use App\Models\Student;
 use App\Models\FacultyLoad;
+use App\Models\SchoolYear;
+use App\Models\Section;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * TODO: Make this work where it needs to show the assigned students base on their school year and section 
+ */
 class TeacherAssignedStudentsController extends Controller
 {
     public function index()
@@ -20,12 +25,12 @@ class TeacherAssignedStudentsController extends Controller
 
         // Step 2: Get all faculty loads with relationships
         $facultyLoads = FacultyLoad::with([
-                'curriculum:id,subject_name,course_code',
-                'section:id,section',
-                'yearLevel:id,year_level',
-                'semester:id,semester_name',
-                'studentLoads.student:id,first_name,last_name,student_number'
-            ])
+            'curriculum:id,subject_name,course_code',
+            'section:id,section',
+            'yearLevel:id,year_level',
+            'semester:id,semester_name',
+            'studentLoads.student:id,first_name,last_name,student_number'
+        ])
             ->where('teacher_id', $teacher->id)
             ->get();
 
@@ -79,5 +84,4 @@ class TeacherAssignedStudentsController extends Controller
             ]
         ]);
     }
-
 }
