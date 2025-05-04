@@ -1,4 +1,6 @@
 <script setup>
+import LinkBtn from '../../Components/LinkBtn.vue';
+
 const props = defineProps({
   studentInfo: Object
 });
@@ -152,7 +154,7 @@ const averages = calculateAverages();
     <!-- Footer -->
     <div class="mt-12 text-sm">
       <p><strong>Date Issued:</strong> {{ currentDate }}</p>
-      <p class="mt-4">Certified by:</p>
+      <p class="mt-4">Certified by:</p>2
       <p class="mt-10 uppercase font-bold underline">Prof. Juan Dela Cruz</p>
       <p>Registrar</p>
     </div>
