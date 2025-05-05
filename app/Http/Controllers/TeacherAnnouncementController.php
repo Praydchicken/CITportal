@@ -32,6 +32,7 @@ class TeacherAnnouncementController extends Controller
 
         // Announcements
         $announcements = TeacherAnnouncement::with(['yearLevels', 'sections'])
+            ->where('teacher_id', $teacher->id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($announcement) use ($teacherYearLevels, $teacherSections) {
@@ -149,7 +150,6 @@ class TeacherAnnouncementController extends Controller
             return redirect()->back()->with('success', 'Announcement created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Announcement creation failed: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to create announcement: ' . $e->getMessage());
         }
     }
@@ -265,7 +265,6 @@ class TeacherAnnouncementController extends Controller
             return redirect()->back()->with('success', 'Announcement updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Announcement update failed: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update announcement: ' . $e->getMessage());
         }
     }

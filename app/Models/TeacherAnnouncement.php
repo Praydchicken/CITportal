@@ -13,6 +13,7 @@ class TeacherAnnouncement extends Model
 
     protected $fillable = [
         'title_announcement', 
+        'teacher_id',
         'description_announcement', 
         'deadline_announcement',  
         'published_at'

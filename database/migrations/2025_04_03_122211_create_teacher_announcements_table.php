@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('teacher_announcements', function (Blueprint $table) {
             $table->id(); // This creates an unsigned big integer primary key named "id"
+            $table->foreignId('teacher_id')->references('id')->on('teachers')->onDelete('cascade');
             $table->string('title_announcement');
             $table->string('description_announcement');
             $table->timestamp('deadline_announcement')->nullable();

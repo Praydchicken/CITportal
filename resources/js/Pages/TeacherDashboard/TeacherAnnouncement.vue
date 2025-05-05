@@ -293,7 +293,6 @@ const clearFilters = () => {
             <select v-model="form.year_level_id"
               class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 w-full">
               <option value="">Select Year Level</option>
-              <option value="all">All Year Levels</option>
               <option v-for="year in yearLevels" :key="year.id" :value="year.id">
                 {{ year.year_level }}
               </option>
@@ -308,7 +307,6 @@ const clearFilters = () => {
               class="bg-[#ffff] p-2 text-[0.875rem] leading-[1.25rem] rounded-[0.5rem] border-2 w-full"
               :disabled="!form.year_level_id">
               <option value="">Select Section</option>
-              <option value="all">All Sections</option>
               <option v-for="section in uniqueSections" :key="section" :value="section">
                 {{ section }}
               </option>
