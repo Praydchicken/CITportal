@@ -51,18 +51,17 @@ Route::get('/', function () {
 
 // This is only for the guest
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'create' ])->name('login');
+    Route::get('/login', [AuthController::class, 'create'])->name('login');
     Route::post('/login', [AuthController::class, 'store'])->name('login.store');
 
 
-    Route::get('/forgot-password',[ResetPasswordController::class,'requestPassword'])->name('password.request');
+    Route::get('/forgot-password', [ResetPasswordController::class, 'requestPassword'])->name('password.request');
     Route::post('/forgot-password', [ResetPasswordController::class, 'sendEmail'])->name('password.email');
 
     Route::get('/reset-password/{token}', [ResetPasswordController::class, 'resetForm'])->name('password.reset');
     Route::post('/reset-password', [ResetPasswordController::class, 'resetHandler'])->name('password.update');
 
     Route::get('/test-notifications', [EmailTestController::class, 'ClassNotificationTest']);
-    
 });
 
 // This is for the auth
@@ -73,18 +72,18 @@ Route::middleware(['auth'])->group(function () {
 
 // Admin Routes
 Route::middleware(['auth', IsAdmin::class])->group(function () {
-     // For admin routes
+    // For admin routes
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
-    Route::get('/admin/student/info', [PostStudentInfoController::class,'index'])->name('admin.student.info');
+    Route::get('/admin/student/info', [PostStudentInfoController::class, 'index'])->name('admin.student.info');
 
     // For admin school year settings
-    Route::get('/admin/school/year', [SchoolYearController::class,'index'])->name('admin.school.year');
-    Route::post('/admin/school/year', [SchoolYearController::class,'store'])->name('admin.school.year.store');
+    Route::get('/admin/school/year', [SchoolYearController::class, 'index'])->name('admin.school.year');
+    Route::post('/admin/school/year', [SchoolYearController::class, 'store'])->name('admin.school.year.store');
     Route::post('/admin/school-year/{id}/set-active', [SchoolYearController::class, 'setActive'])->name('admin.school.year.set-active');
     Route::delete('/admin/school-year/{id}/delete', [SchoolYearController::class, 'destroy'])->name('admin.school.year.delete');
 
     // For managing a teacher
-    Route::post('/admin/add/teacher', [TeacherController::class,'store'])->name('admin.add.teacher');
+    Route::post('/admin/add/teacher', [TeacherController::class, 'store'])->name('admin.add.teacher');
     Route::put('/admin/teachers/{teacher}', [TeacherController::class, 'update'])->name('admin.update.teacher');
     Route::delete('/admin/teachers/{teacher}', [TeacherController::class, 'destroy'])->name('admin.destroy.teacher');
 
@@ -96,7 +95,7 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::post('student/addInfo', [PostStudentInfoController::class, 'store'])->name('student.addInfo');
     Route::delete('student/{id}/delete', [PostStudentInfoController::class, 'destroy']);
     Route::put('student/{student}/update', [PostStudentInfoController::class, 'update']);
-    Route::get('/admin/section/management', [PostSectionManagementController::class,'index'])->name('admin.section.management');
+    Route::get('/admin/section/management', [PostSectionManagementController::class, 'index'])->name('admin.section.management');
     Route::post('/admin/section/add', [PostSectionManagementController::class, 'store'])->name('section.store');
     Route::put('/admin/section/{section}', [PostSectionManagementController::class, 'update'])->name('section.update');
     Route::delete('/admin/section/{section}', [PostSectionManagementController::class, 'destroy'])->name('section.destroy');
@@ -133,9 +132,9 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::delete('/admin/{admin}', [AdminController::class, 'destroy'])->name('admin.destroy');
 
     // For admin classroom settings
-    Route::get('/admin/classroom', [ClassRoomController::class,'index'])->name('admin.classroom');
-    Route::post('/admin/classroom', [ClassRoomController::class,'store'])->name('admin.classroom.store');
-    
+    Route::get('/admin/classroom', [ClassRoomController::class, 'index'])->name('admin.classroom');
+    Route::post('/admin/classroom', [ClassRoomController::class, 'store'])->name('admin.classroom.store');
+
     // Teacher management routes
     Route::post('/teacher/add', [TeacherController::class, 'store'])->name('teacher.store');
     Route::put('/teacher/{teacher}/update', [TeacherController::class, 'update'])->name('teacher.update');
@@ -158,7 +157,7 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
     Route::put('/admin/student/promote/{studentNo}', [ViewStudentInfoController::class, 'promote'])->name('admin.student.promote');
 
     // routes/web.php
-    Route::delete('/clear-flash', function() {
+    Route::delete('/clear-flash', function () {
         Session::forget(['success', 'error', 'message']);
         return response()->noContent();
     })->name('admin.clear-flash');
@@ -167,7 +166,7 @@ Route::middleware(['auth', IsAdmin::class])->group(function () {
 
 // Teacher Routes
 Route::middleware(['auth', IsTeacher::class])->group(function () {
-   // For teacher dashboard and features
+    // For teacher dashboard and features
     Route::get('/teacher/dashboard', [TeacherController::class, 'index'])->name('teacher.dashboard');
     Route::get('/teacher/class/schedule', [TeacherClassScheduleController::class, 'index'])->name('teacher.class.schedule');
     Route::get('/teacher/assigned/subjects', [TeacherAssignedSubjectsController::class, 'index'])->name('teacher.assigned.subjects');
@@ -185,7 +184,7 @@ Route::middleware(['auth', IsTeacher::class])->group(function () {
     Route::get('/teacher/grade/management/view/course/grade', [ViewCourseGradeController::class, 'index'])->name('teacher.grade.management.view.course.grade');
     Route::post('/teacher/grade/management/add/{id}/course/grade', [ViewCourseGradeController::class, 'store'])->name('teacher.grade.management.add.course.grade');
     Route::put('/teacher/grade/management/edit/{id}/course/grade', [ViewCourseGradeController::class, 'update'])->name('teacher.grade.management.edit.course.grade');
-    Route::delete('/teacher/grade/management/delete/{id}/course/grade', [ViewCourseGradeController::class, 'destroy'])->name('teacher.grade.management.delete.course.grade');
+    // Route::delete('/teacher/grade/management/delete/{id}/course/grade', [ViewCourseGradeController::class, 'destroy'])->name('teacher.grade.management.delete.course.grade');
 });
 
 // Student Routes
@@ -197,8 +196,4 @@ Route::middleware(['auth', IsStudent::class])->group(function () {
     Route::get('/student/view/grade', [ForStudentGradeViewController::class, 'index'])->name('student.grade.view');
 
     Route::get('/for/student/view/grade', [StudentAnnouncementViewController::class, 'index'])->name('student.announcement.view');
-    
 });
-
-
-   

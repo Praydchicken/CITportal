@@ -107,6 +107,9 @@ const filteredCourses = computed(() => {
     });
 });
 
+console.log(filteredCourses);
+
+
 // Check if any grades exist for the selected school year
 const hasGrades = computed(() => {
     return filteredCourses.value.some(course => course.grade !== null);
@@ -202,6 +205,15 @@ const computeResult = () => {
 
     showResults.value = true;
 };
+
+const hasMissingGrades = computed(() => {
+    return assignedCourses.value.some(course => {
+        const gradeExists = filteredCourses.value.some(fc =>
+            fc.id === course.id && fc.grade !== null
+        );
+        return !gradeExists;
+    });
+});
 
 const calculateRawGrade = (prelim, midterm, final) => {
     const prelimGrade = prelim;
@@ -383,7 +395,19 @@ const editGrades = () => {
     showResults.value = false;
 };
 
-const deleteGrade = () => {
+const deleteGrade = (gradeId) => {
+    console.log('Attempting to delete grade with ID:', gradeId); // Add this line
+
+    if (!gradeId) {
+        Swal.fire({
+            title: 'Error!',
+            text: 'Grade ID is missing',
+            icon: 'error',
+            confirmButtonColor: '#1a3047'
+        });
+        return;
+    }
+
     Swal.fire({
         title: 'Are you sure?',
         text: "You won't be able to revert this!",
@@ -394,25 +418,27 @@ const deleteGrade = () => {
         confirmButtonText: 'Yes, delete it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            router.delete(`/teacher/grade/management/delete/${props.student.id}`, {
-                data: {
-                    school_year_id: selectedSchoolYear.value,
-                    semester_id: props.semester
-                },
+            router.delete(`/teacher/grade/management/delete/${gradeId}/course/grade`, {
+                preserveScroll: true,
                 preserveScroll: true,
                 onSuccess: () => {
                     Swal.fire({
                         title: 'Deleted!',
-                        text: 'Grades have been deleted.',
+                        text: 'Grade has been deleted.',
                         icon: 'success',
                         confirmButtonColor: '#1a3047'
                     });
+                    // Reset these states to show the input form
+                    isReadOnly.value = false;
+                    isEditMode.value = false;
+                    showResults.value = false;
                     router.reload();
                 },
-                onError: () => {
+                onError: (error) => {
+                    console.error('Delete error:', error); // Log the error
                     Swal.fire({
                         title: 'Error!',
-                        text: 'Failed to delete grades.',
+                        text: 'Failed to delete grade.',
                         icon: 'error',
                         confirmButtonColor: '#1a3047'
                     });
@@ -471,7 +497,8 @@ const changeSchoolYear = (yearId) => {
                     </div>
                     <!-- Input Table (only show if no grades exist for selected school year or in edit mode) -->
                     <template v-else>
-                        <div v-if="!hasGrades || isEditMode" class="overflow-x-auto bg-white rounded-lg">
+                        <div v-if="!hasGrades || hasMissingGrades || isEditMode"
+                            class="overflow-x-auto bg-white rounded-lg">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead>
                                     <tr>
@@ -526,7 +553,7 @@ const changeSchoolYear = (yearId) => {
 
 
                         <!-- Compute Button (only show if no grades exist for selected school year or in edit mode) -->
-                        <div v-if="(!hasGrades || isEditMode) && !showResults" class="mt-6">
+                        <div v-if="(!hasGrades || hasMissingGrades || isEditMode) && !showResults" class="mt-6">
                             <button @click="computeResult"
                                 class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
                                 Compute Result
@@ -643,7 +670,7 @@ const changeSchoolYear = (yearId) => {
                                                     'N/A' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.final_grade ? Math.floor(course.grade.final_grade) : 'N/A'
-                                            }}</td>
+                                                }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.raw_grade ? Math.floor(course.grade.raw_grade) : 'N/A' }}
                                             </td>
@@ -674,14 +701,14 @@ const changeSchoolYear = (yearId) => {
                                                             Edit
                                                         </button>
                                                     </li>
-                                                    <li>
-                                                        <button @click="deleteGrade"
+                                                    <!-- <li>
+                                                        <button @click="deleteGrade(course.grade?.id)"
                                                             class="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
                                                             :disabled="course.grade?.grade_status === 'Approved'"
                                                             :class="{ 'opacity-50 cursor-not-allowed': course.grade?.grade_status === 'Approved' }">
                                                             Delete
                                                         </button>
-                                                    </li>
+                                                    </li> -->
                                                 </ul>
                                             </td>
                                         </tr>
@@ -691,17 +718,11 @@ const changeSchoolYear = (yearId) => {
                         </div>
 
                         <!-- Empty state when no grades exist for selected school year -->
-                        <div v-if="!hasGrades && !isEditMode"
+                        <div v-if="!hasGrades && !hasMissingGrades && !isEditMode"
                             class="mt-8 text-center py-12 bg-white rounded-lg shadow-sm w-full">
                             <h3 class="mt-2 text-sm font-medium text-gray-900">No Grades Found for
                                 "{{ student.first_name }} {{ student.last_name }}"</h3>
                             <p class="mt-1 text-sm text-gray-500">You can add grades for students above.</p>
-                            <!-- <div class="mt-6">
-                                <button @click="editGrades"
-                                    class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                    Add Grades
-                                </button>
-                            </div> -->
                         </div>
                     </template>
                 </div>

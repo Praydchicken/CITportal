@@ -82,6 +82,7 @@ class ViewCourseGradeController extends Controller
                     });
 
                     $course['grades'][$year->id] = $grade ? [
+                        'id' => $grade->id, // Add this line to include the grade ID
                         'prelim_grade' => $grade->prelim_grade,
                         'midterm_grade' => $grade->midterm_grade,
                         'final_grade' => $grade->final_grade,
@@ -235,19 +236,20 @@ class ViewCourseGradeController extends Controller
         }
     }
 
-    public function destroy($id)
-    {
-        try {
-            $studentGrade = StudentGrade::find($id);
+    // public function destroy($id)
+    // {
+    //     // dd($id);
+    //     try {
+    //         $studentGrade = StudentGrade::find($id);
 
-            if (!$studentGrade) {
-                return back()->withErrors(['error' => 'Student not found']);
-            }
+    //         if (!$studentGrade) {
+    //             return back()->withErrors(['error' => 'Grade not found']);
+    //         }
 
-            $studentGrade->delete(); // Soft delete (sets deleted_at instead of removing the record)
-            return back()->with('success', 'Student deleted successfully');
-        } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Failed to delete student: ' . $e->getMessage()]);
-        }
-    }
+    //         $studentGrade->delete();
+    //         return back()->with('success', 'Grade deleted successfully');
+    //     } catch (\Exception $e) {
+    //         return back()->withErrors(['error' => 'Failed to delete grade: ' . $e->getMessage()]);
+    //     }
+    // }
 }
