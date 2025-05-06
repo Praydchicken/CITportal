@@ -166,7 +166,8 @@ const clearFilters = () => {
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-for="student in filteredStudents" :key="student.id" class="hover:bg-gray-50">
+                        <tr v-for="(student, index) in filteredStudents" :key="student.id" class="hover:bg-gray-50"
+                            :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ student.student_number }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ student.first_name }}</td>

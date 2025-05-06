@@ -192,6 +192,7 @@ const viewCourse = (studentGradeId) => {
 </script>
 
 <template>
+
   <Head title="Student Grades" />
   <div class="relative">
     <Overlay :show="isModalOpen" @click="closeModal" />
@@ -326,7 +327,8 @@ const viewCourse = (studentGradeId) => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="grade in firstSemesterGrades" :key="grade.id" class="hover:bg-gray-50">
+            <tr v-for="(grade, index) in firstSemesterGrades" :key="grade.id"
+              :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
               <td class="px-6 py-4 text-sm">{{ grade.student?.student_number }}</td>
               <td class="px-6 py-4 text-sm">{{ grade.student?.first_name }}</td>
               <td class="px-6 py-4 text-sm">{{ grade.student?.last_name }}</td>
@@ -387,7 +389,8 @@ const viewCourse = (studentGradeId) => {
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200">
-            <tr v-for="grade in secondSemesterGrades" :key="grade.id" class="hover:bg-gray-50">
+            <tr v-for="(grade, index) in secondSemesterGrades" :key="grade.id" class="hover:bg-gray-50"
+              :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
               <td class="px-6 py-4 text-sm">{{ grade.student?.student_number }}</td>
               <td class="px-6 py-4 text-sm">{{ grade.student?.first_name }}</td>
               <td class="px-6 py-4 text-sm">{{ grade.student?.last_name }}</td>

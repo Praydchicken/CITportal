@@ -26,7 +26,8 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="grade in grades" :key="grade.id">
+                <tr v-for="(grade, index) in grades" :key="grade.id"
+                    :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {{ grade.semester_id }}
                     </td>

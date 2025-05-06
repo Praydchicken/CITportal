@@ -496,7 +496,8 @@ const changeSchoolYear = (yearId) => {
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="(course, index) in courseGrades" :key="course.id">
+                                    <tr v-for="(course, index) in courseGrades" :key="course.id"
+                                        :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ index + 1 }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
@@ -642,7 +643,7 @@ const changeSchoolYear = (yearId) => {
                                                     'N/A' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.final_grade ? Math.floor(course.grade.final_grade) : 'N/A'
-                                                }}</td>
+                                            }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{
                                                 course.grade?.raw_grade ? Math.floor(course.grade.raw_grade) : 'N/A' }}
                                             </td>

@@ -292,7 +292,8 @@ console.log(groupedStudents);
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                <tr v-for="student in group.students" :key="student.id" class="hover:bg-gray-50">
+                <tr v-for="(student, index) in group.students" :key="student.id" class="hover:bg-gray-50"
+                  :class="index % 2 === 0 ? 'bg-neutral-300' : 'bg-gray-200'">
                   <template v-if="student.id === null">
                     <td :colspan="5" class="text-center py-6 rounded-lg shadow-sm">
                       <svg class="mx-auto h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
