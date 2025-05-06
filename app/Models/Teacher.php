@@ -42,6 +42,21 @@ class Teacher extends Model
     {
         return $this->hasMany(FacultyLoad::class);
     }
+    /**
+     * Get the semesters associated with the teacher.
+     */
+    public function announcements(): HasMany
+    {
+        return $this->hasMany(TeacherAnnouncement::class);
+    }
+    /**
+     * Get the semesters associated with the teacher.
+     */
+    public function teachers(): BelongsTo
+    {
+        return $this->belongsTo(Teacher::class);
+    }
+    
 
     public function studentGrades(): HasMany
     {
