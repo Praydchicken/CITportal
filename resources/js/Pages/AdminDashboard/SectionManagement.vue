@@ -205,10 +205,11 @@ const showNotification = (message, type = 'success') => {
 const submitForm = () => {
     loading.value = true;
     if (isEditMode.value && selectedSection.value) {
-        form.put(`/sections/${selectedSection.value.id}/update`, {
+        form.put(`/admin/section/${selectedSection.value.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 showNotification('Section updated successfully');
+                isModalOpen.value = false;
                 closeModal();
             },
             onError: (errors) => {
@@ -218,11 +219,13 @@ const submitForm = () => {
                 loading.value = false;
             }
         });
+
     } else {
         form.post('/admin/section/add', {
             preserveScroll: true,
             onSuccess: () => {
                 showNotification('Section added successfully');
+                isModalOpen.value = false;
                 closeModal();
             },
             onError: (errors) => {
@@ -431,7 +434,7 @@ const processNestedValue = (item, key) => {
                         </option>
                     </select>
                     <p v-if="form.errors.year_level_id" class="text-red-500 text-sm mt-1">{{ form.errors.year_level_id
-                    }}</p>
+                        }}</p>
                 </div>
 
                 <div>
