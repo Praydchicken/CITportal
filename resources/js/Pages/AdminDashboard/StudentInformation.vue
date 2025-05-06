@@ -230,14 +230,13 @@ const openModal = (student) => {
 
 
 const closeModal = () => {
-  console.log("Closing modal...");
+  console.log("closing")
   if (loading.value) return;
   selectedStudent.value = null;
   isEditMode.value = false;
   form.reset();  // Reset form data
   form.clearErrors();  // Clear form errors
   isModalOPen.value = false;
-
 };
 
 
@@ -287,24 +286,27 @@ const submitForm = () => {
     form.put(`/student/${selectedStudent.value.id}/update`, {
       preserveScroll: true,
       onSuccess: (page) => {
-        // Find and update the edited student
-        const editedStudentIndex = students.value.findIndex(s => s.id === selectedStudent.value.id);
-        if (editedStudentIndex !== -1) {
-          const updatedStudent = page.props.student || {
-            ...students.value[editedStudentIndex],
-            ...form._data
-          };
-          // Remove the student from current position and add to top
-          students.value.splice(editedStudentIndex, 1);
-          students.value.unshift(updatedStudent);
-          showNotification('Student updated successfully');
+        showNotification('Student updated successfully');
+
+        // Update the student in the list immediately
+        const updatedStudent = page.props.updatedStudent || page.props.student;
+        if (updatedStudent) {
+          const index = props.students.data.findIndex(s => s.id === updatedStudent.id);
+          if (index !== -1) {
+            // Create a new array to trigger reactivity
+            const updatedStudents = [...props.students.data];
+            updatedStudents[index] = updatedStudent;
+            // Update the students prop (if using a ref) or trigger a refresh
+            students.value = {
+              ...props.students,
+              data: updatedStudents
+            };
+          }
         }
         isModalOPen.value = false;
         form.reset();
-        closeModal();
       },
       onError: (errors) => {
-        console.log("Validation Errors:", errors);
         showNotification('Failed to update student', 'error');
       },
       onFinish: () => {
@@ -336,7 +338,6 @@ const submitForm = () => {
         closeModal();
       },
       onError: (errors) => {
-        console.log("Validation Errors:", errors);
         const errorMessage = errors.message || Object.values(errors)[0] || 'Failed to add student';
         showNotification(errorMessage, 'error');
       },
@@ -578,7 +579,7 @@ const formFilteredSections = computed(() => {
     <div class="mt-6 flex items-center justify-between p-6" :class="{ 'pointer-events-none opacity-50': isModalOPen }">
       <div class="text-sm text-gray-700">
         Showing <span class="font-semibold">{{ students.from }}</span> to <span class="font-semibold">{{ students.to
-        }}</span> of <span class="font-semibold">{{ students.total }}</span> students
+          }}</span> of <span class="font-semibold">{{ students.total }}</span> students
       </div>
       <nav class="relative rounded-md shadow-sm -space-x-px" aria-label="Pagination">
         <Link v-if="students.currentPage > 1" :href="students.links.prev" preserve-scroll rel="prev"

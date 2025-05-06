@@ -296,12 +296,9 @@ class PostStudentInfoController extends Controller
 
             DB::commit();
 
-            // Load relationships for the response
-            $student->load(['section', 'yearLevel', 'user', 'status', 'semester']);
-
-            return back()->with([
-                'success' => 'Student updated successfully and loads synchronized.',
-                'student' => $student
+            return redirect()->back()->with([
+                'success' => 'Student updated successfully!',
+                'updatedStudent' => $student->fresh(['section', 'yearLevel', 'user', 'status', 'semester'])
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
