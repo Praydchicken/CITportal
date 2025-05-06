@@ -134,6 +134,19 @@ class FacultyLoadController extends Controller
                 'maximum_number_students' => $requestedSection->maximum_number_students
             ]);
 
+            // Check if the same subject is already assigned to this section in this semester
+            $sameSubjectConflict = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
+                ->where('section_id', $activeSection->id)
+                ->where('curriculum_id', $validated['curriculum_id'])
+                ->where('year_level_id', $validated['year_level_id'])
+                ->where('semester_id', $validated['semester_id'])
+                ->exists();
+
+            if ($sameSubjectConflict) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Conflict: This subject is already assigned to this section for this semester.']);
+            }
+
             // Check for duplicate subject assignment (same teacher, same section, same subject, same day)
             $duplicateSubject = FacultyLoad::where('teacher_id', $validated['teacher_id'])
                 ->where('section_id', $activeSection->id)
@@ -204,14 +217,14 @@ class FacultyLoadController extends Controller
                 return back()->withErrors(['message' => 'Schedule conflict: This section already has a class scheduled during this time slot.']);
             }
 
-            // Conflict for same section and curriculum with different teachers (for update)
-            $sameSubjectConflict = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
+            // Conflict for same section and curriculum with different teachers
+            $sameSubjectDifferentTeacher = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
                 ->where('section_id', $validated['section_id'])
                 ->where('curriculum_id', $validated['curriculum_id'])
                 ->where('teacher_id', '!=', $validated['teacher_id'])
                 ->exists();
 
-            if ($sameSubjectConflict) {
+            if ($sameSubjectDifferentTeacher) {
                 DB::rollBack();
                 return back()->withErrors(['message' => 'Conflict: Another teacher is already assigned to this section with the same subject.']);
             }
@@ -304,6 +317,20 @@ class FacultyLoadController extends Controller
         try {
             DB::beginTransaction();
 
+            // Check if the same subject is already assigned to this section in this semester (excluding current load)
+            $sameSubjectConflict = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
+                ->where('section_id', $validated['section_id'])
+                ->where('curriculum_id', $validated['curriculum_id'])
+                ->where('year_level_id', $validated['year_level_id'])
+                ->where('semester_id', $validated['semester_id'])
+                ->where('id', '!=', $facultyLoad->id)
+                ->exists();
+
+            if ($sameSubjectConflict) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Conflict: This subject is already assigned to this section for this semester.']);
+            }
+
             // Check for duplicate subject assignment (same teacher, same section, same subject, same day)
             $duplicateSubject = FacultyLoad::where('teacher_id', $validated['teacher_id'])
                 ->where('section_id', $validated['section_id'])
@@ -380,18 +407,17 @@ class FacultyLoadController extends Controller
                 return back()->withErrors(['message' => 'Schedule conflict: This section already has another class scheduled during this time slot.']);
             }
 
-               // Conflict for same section and curriculum with different teachers (for update)
-               $sameSubjectConflict = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
-               ->where('section_id', $validated['section_id'])
-               ->where('curriculum_id', $validated['curriculum_id'])
-               ->where('teacher_id', '!=', $validated['teacher_id'])
-               ->exists();
+            // Conflict for same section and curriculum with different teachers (for update)
+            $sameSubjectDifferentTeacher = FacultyLoad::where('school_year_id', $activeSchoolYear->id)
+                ->where('section_id', $validated['section_id'])
+                ->where('curriculum_id', $validated['curriculum_id'])
+                ->where('teacher_id', '!=', $validated['teacher_id'])
+                ->exists();
 
-           if ($sameSubjectConflict) {
-               DB::rollBack();
-               return back()->withErrors(['message' => 'Conflict: Another teacher is already assigned to this section with the same subject.']);
-           }
-
+            if ($sameSubjectDifferentTeacher) {
+                DB::rollBack();
+                return back()->withErrors(['message' => 'Conflict: Another teacher is already assigned to this section with the same subject.']);
+            }
 
             // Update faculty load with the correct IDs and school year
             $facultyLoad->update([
