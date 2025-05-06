@@ -90,7 +90,13 @@ class PostStudentInfoController extends Controller
         }
 
         $validated = $request->validate([
-            'student_number' => 'required|string|unique:students,student_number|max:9',
+            'student_number' => [
+                'required',
+                'string',
+                'size:9', // Enforces exactly 9 characters
+                'unique:students,student_number',
+                'regex:/^[0-9]+$/' // Ensures only digits
+            ],
             'first_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',

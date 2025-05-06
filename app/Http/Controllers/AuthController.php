@@ -38,7 +38,7 @@ class AuthController extends Controller
             }
 
             return redirect()->route('student.profile');
-            }
+        }
 
         // Login failed
         return back()->withErrors([
