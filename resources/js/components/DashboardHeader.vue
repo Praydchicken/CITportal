@@ -2,7 +2,7 @@
 import LogoutBtn from "../components/LogoutBtn.vue"
 
 defineProps({
-  content: Array // Accepts an array of links
+    content: Array // Accepts an array of links
 });
 </script>
 
@@ -15,15 +15,22 @@ defineProps({
         <div class="flex gap-x-5 items-center justify-center">
             <div class="flex gap-x-2 items-center justify-center">
                 <div class="flex gap-x-2 items-center justify-end">
-                    <img src="https://picsum.photos/id/1/200/300" alt="" class="rounded-full w-10 h-10 object-cover">
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
+                        viewBox="0 0 24 24">
+                        <path fill-rule="evenodd"
+                            d="M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm-2 9a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4h-4Z"
+                            clip-rule="evenodd" />
+                    </svg>
+
                     <button class=" text-[#1a3047] cursor-pointer font-semibold">{{ content[0].name }}</button>
-                </div>  
+                </div>
                 <p class=" text-[gray] border-l-2 border-gray-500 pl-2.5">{{ content[0].userType }}</p>
             </div>
 
             <div>
                 <LogoutBtn />
-             </div>
+            </div>
         </div>
     </header>
 </template>
